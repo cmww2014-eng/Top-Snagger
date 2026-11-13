@@ -125,7 +125,11 @@ h1, h2, h3 { font-family: var(--f-display); letter-spacing: .01em; line-height: 
 .form input[type="text"], .form input[type="password"], .form input[type="date"], .form textarea {
   width: 100%; border: 1.5px solid var(--line); background: var(--surface); border-radius: 12px; padding: 12px 14px; font-size: 17px; line-height: 1.4; }
 .form textarea { min-height: 84px; resize: vertical; }
-.inputwrap textarea { padding-right: 60px; }
+.speakrow { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.btn.speak { background: var(--accent); color: var(--accent-ink); font-size: 18px; min-height: 56px; }
+.btn.speak.live { background: var(--rec); color: #fff; animation: pulse 1.2s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .btn.speak.live { animation: none; } }
+#tidyBtn { min-height: 56px; }
 .dict textarea { min-height: 150px; font-size: 18px; }
 .record { background: var(--surface); border-radius: 14px; padding: 14px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 14px; }
 .tidynote { font-size: 13px; color: var(--muted); min-height: 1em; }
@@ -268,8 +272,11 @@ h1, h2, h3 { font-family: var(--f-display); letter-spacing: .01em; line-height: 
       <div class="field">
         <label for="f-raw">Describe the snag</label>
         <div class="inputwrap dict"><textarea id="f-raw" data-k="raw" rows="5" placeholder="Just say it in one go, e.g. &#8220;Tipping hall, east elevation, gridline C4 to C6 at level 2. Composite wall panel dented, about 300 mm, looks like plant impact. Panel needs replacing. Cladding contractor.&#8221;"></textarea></div>
+        <div class="speakrow">
+          <button class="btn speak" id="speakBtn" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>Speak</button>
+          <button class="btn dark" id="tidyBtn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg>Tidy into record</button>
+        </div>
         <div class="hint" id="voiceHint" hidden></div>
-        <button class="btn dark block" id="tidyBtn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg>Tidy into record</button>
         <span class="tidynote" id="tidyNote"></span>
       </div>
 
@@ -596,20 +603,30 @@ async function addFiles(files) {
 ['#camInput', '#galInput'].forEach(s => $(s).addEventListener('change', e => { const f = [...e.target.files]; e.target.value = ''; addFiles(f); }));
 
 /* ---------------- voice ---------------- */
-let voice = null;         // {start(onPartial,onFinal,onEnd), stop()}
-let live = null;          // {el, btn, base, committed}
+let voice = null;         // {start(onPartial,onFinal,onEnd,onFail), stop()}
+let live = null;          // {el, base, committed}
+const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 function setupSR() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) return null;
   let rec = null;
   return {
     kind: 'browser',
-    start(onPartial, onFinal, onEnd) {
-      rec = new SR(); rec.lang = navigator.language || 'en-GB'; rec.continuous = true; rec.interimResults = true;
-      rec.onresult = ev => { let interim = ''; for (let i = ev.resultIndex; i < ev.results.length; i++) { const t = ev.results[i][0].transcript; if (ev.results[i].isFinal) onFinal(t); else interim += t; } onPartial(interim); };
-      rec.onerror = ev => { if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') { toast('Microphone blocked. Use the mic on your keyboard instead.'); voiceUnavailable(); } };
-      rec.onend = () => onEnd();
-      rec.start();
+    start(onPartial, onFinal, onEnd, onFail) {
+      let started = false, failed = false;
+      const fail = msg => { if (failed) return; failed = true; try { rec.abort(); } catch {} onFail(msg); };
+      try {
+        rec = new SR(); rec.lang = navigator.language || 'en-GB'; rec.continuous = true; rec.interimResults = true;
+        rec.onstart = () => { started = true; };
+        rec.onresult = ev => { started = true; let interim = ''; for (let i = ev.resultIndex; i < ev.results.length; i++) { const t = ev.results[i][0].transcript; if (ev.results[i].isFinal) onFinal(t); else interim += t; } onPartial(interim); };
+        rec.onerror = ev => {
+          if (ev.error === 'no-speech' || ev.error === 'aborted') return;
+          fail(ev.error === 'not-allowed' || ev.error === 'service-not-allowed' ? 'The microphone is blocked for this app.' : 'Voice input stopped (' + ev.error + ').');
+        };
+        rec.onend = () => { if (!failed) onEnd(); };
+        rec.start();
+        setTimeout(() => { if (!started && !failed && live) fail('Voice input did not start.'); }, 5000);
+      } catch { fail('Voice input is not available here.'); }
     },
     stop() { try { rec && rec.stop(); } catch {} }
   };
@@ -621,35 +638,31 @@ function setupCapability(d) {
   d.onState(({ state }) => { if (state === 'idle' && handlers) { const h = handlers; handlers = null; h.e(); } });
   return {
     kind: 'claude',
-    start(onPartial, onFinal, onEnd) {
+    start(onPartial, onFinal, onEnd, onFail) {
       handlers = { p: onPartial, f: onFinal, e: onEnd };
-      d.start().catch(err => { const h = handlers; handlers = null; h && h.e(); if (err?.code === 'not_granted') voiceUnavailable(); else if (err?.code !== 'dismissed') toast('Dictation is not available here. Use the mic on your keyboard.'); });
+      d.start().catch(err => { const h = handlers; handlers = null; if (err?.code === 'dismissed') { h && h.e(); return; } onFail('Voice input is not available here.'); });
     },
     stop() { d.stop().catch(() => {}); }
   };
 }
-function addMicButtons() {
-  $$('#editor .inputwrap.dict').forEach(w => {
-    if ($('.mic', w)) return;
-    const el = $('textarea, input', w);
-    const b = document.createElement('button'); b.type = 'button'; b.className = 'mic'; b.innerHTML = ICON.mic;
-    b.setAttribute('aria-label', 'Dictate ' + ($(`label[for="${el.id}"]`)?.textContent || ''));
-    b.onclick = () => toggleVoice(el, b);
-    w.append(b);
-  });
-}
-function voiceUnavailable() {
-  voice = null; $$('#editor .mic').forEach(b => b.remove());
+function showVoiceHint() {
   const h = $('#voiceHint'); h.hidden = false;
-  h.innerHTML = `${ICON.mic}<span>To dictate, tap a box below, then tap the <b>microphone on your phone's keyboard</b> and speak.</span>`;
+  h.innerHTML = `${ICON.mic}<span>${isIOS
+    ? 'Tap in the box above, then tap the <b>microphone at the bottom right of the keyboard</b> and speak. No microphone there? Turn on <b>Settings › General › Keyboard › Enable Dictation</b> on your iPhone.'
+    : 'Tap in the box above, then tap the <b>microphone on your keyboard</b> and speak. On Gboard it is at the top right of the keyboard.'}</span>`;
 }
-function toggleVoice(el, btn) {
-  if (live && live.el === el) { stopVoice(); return; }
-  stopVoice();
-  if (!voice) return;
+function setSpeak(on) {
+  const b = $('#speakBtn'); b.classList.toggle('live', on); b.setAttribute('aria-pressed', on);
+  b.innerHTML = on ? ICON.stop + 'Stop' : ICON.mic + 'Speak';
+}
+function keyboardFallback(msg) {
+  voice = null; endLive(); showVoiceHint();
+  const el = $('#f-raw'); el.focus(); try { el.setSelectionRange(el.value.length, el.value.length); } catch {}
+  if (msg) toast(msg + ' Use the microphone on your keyboard.');
+}
+function startVoice(el) {
   const base = el.value && !/\s$/.test(el.value) ? el.value + ' ' : el.value;
-  live = { el, btn, base, committed: '' };
-  btn.classList.add('live'); btn.innerHTML = ICON.stop; btn.setAttribute('aria-pressed', 'true');
+  live = { el, base, committed: '' }; setSpeak(true);
   const write = partial => {
     if (!live || live.el !== el) return;
     el.value = (live.base + live.committed + (partial || '')).replace(/\s+$/, partial ? '' : ' ').trimStart();
@@ -658,22 +671,27 @@ function toggleVoice(el, btn) {
   voice.start(
     p => write(p),
     f => { if (!live) return; const t = f.trim(); if (t) live.committed += t.charAt(0).toUpperCase() + t.slice(1) + ' '; write(''); },
-    () => { if (live && live.el === el) endLive(); }
+    () => { if (live && live.el === el) endLive(); },
+    msg => keyboardFallback(msg)
   );
 }
 function endLive() {
   if (!live) return;
-  const { el, btn } = live; live = null;
-  btn.classList.remove('live'); btn.innerHTML = ICON.mic; btn.setAttribute('aria-pressed', 'false');
+  const { el } = live; live = null; setSpeak(false);
   el.value = el.value.trim(); if (cur && el.dataset.k) { cur[el.dataset.k] = el.value; queueSave(); setTidyNote(); }
 }
 function stopVoice() { if (live) { voice && voice.stop(); endLive(); } }
+$('#speakBtn').onclick = () => {
+  if (live) { stopVoice(); return; }
+  if (!voice) { keyboardFallback(); return; }
+  startVoice($('#f-raw'));
+};
 async function initVoice() {
   if (inViewer()) {
     let d = null; try { d = await window.claude.use('dictation'); } catch {}
     voice = d ? setupCapability(d) : null;
   } else voice = setupSR();
-  if (voice) addMicButtons(); else voiceUnavailable();
+  if (!voice) showVoiceHint();
 }
 
 /* ---------------- tidy: one dictation -> record ---------------- */
