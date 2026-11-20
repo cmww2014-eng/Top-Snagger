@@ -116,6 +116,39 @@ h1, h2, h3 { font-family: var(--f-display); letter-spacing: .01em; line-height: 
 .fab { flex: 1; font-size: 18px; min-height: 56px; }
 
 /* sheets */
+#editor { z-index: 45; }
+/* plans */
+.plancard .thumb img { object-fit: contain; background: #fff; }
+.planbar { display: flex; align-items: center; gap: 8px; padding-block: 10px; flex-wrap: wrap; }
+.planbar .hinttext { flex: 1 1 200px; min-width: 0; font-size: 14px; color: var(--muted); }
+.zoom { display: flex; align-items: center; gap: 4px; }
+.zoom button { width: 44px; height: 44px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--surface); font-size: 22px; font-weight: 600; }
+.zoom span { min-width: 4ch; text-align: center; font-size: 13px; color: var(--muted); }
+.planscroll { overflow: auto; -webkit-overflow-scrolling: touch; padding: 0 var(--gutter-r) 220px var(--gutter-l); }
+.planbox { position: relative; max-width: none; min-width: 100%; }
+.planbox img { display: block; width: 100%; max-width: none; height: auto; background: #fff; border-radius: 6px; box-shadow: var(--shadow); user-select: none; -webkit-user-drag: none; }
+.planbox svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.planbox svg.editing { touch-action: none; cursor: crosshair; }
+.room rect { fill: color-mix(in srgb, var(--accent) 22%, transparent); stroke: var(--accent); stroke-width: 0.25%; vector-effect: non-scaling-stroke; cursor: pointer; }
+.room.has rect { fill: color-mix(in srgb, var(--open) 18%, transparent); stroke: var(--open); }
+.room.sel rect { stroke-width: 4px; fill: color-mix(in srgb, var(--focus) 25%, transparent); stroke: var(--focus); }
+.room text { fill: #16212c; font-family: var(--f-display); font-weight: 700; text-anchor: middle; dominant-baseline: central; pointer-events: none; paint-order: stroke; stroke: rgba(255,255,255,.85); stroke-width: 3px; }
+.room circle { fill: var(--open); }
+.room text.n { fill: #fff; stroke: none; font-family: var(--f-body); }
+.draft { fill: color-mix(in srgb, var(--focus) 20%, transparent); stroke: var(--focus); stroke-width: 3px; vector-effect: non-scaling-stroke; stroke-dasharray: 6 4; }
+.roompanel { position: fixed; left: 0; right: 0; bottom: 0; z-index: 42; background: var(--surface); border-top: 1px solid var(--line); box-shadow: 0 -6px 24px rgba(0,0,0,.18); border-radius: 16px 16px 0 0; padding-bottom: env(safe-area-inset-bottom, 0px); max-height: 60%; overflow-y: auto; }
+.rp { display: flex; flex-direction: column; gap: 10px; padding-block: 14px; }
+.rp input[type="text"] { width: 100%; border: 1.5px solid var(--line); background: var(--bg); border-radius: 12px; padding: 12px 14px; font-size: 17px; }
+.rprow { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.rphead { display: flex; align-items: center; gap: 8px; } .rphead h2 { flex: 1; font-size: 24px; }
+.rplist { display: flex; flex-direction: column; gap: 6px; }
+.rpitem { display: flex; gap: 10px; align-items: center; text-align: left; border: 1px solid var(--line); background: var(--bg); border-radius: 10px; padding: 10px 12px; width: 100%; }
+.rptext { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.roomchip { display: flex; align-items: center; gap: 10px; background: var(--surface); border: 1.5px solid var(--accent); border-radius: 12px; padding: 8px 8px 8px 14px; font-weight: 600; }
+.roomchip span { flex: 1; min-width: 0; }
+.roomchip button { border: 0; background: var(--sunken); border-radius: 8px; padding: 8px 12px; font-size: 14px; }
+.form select { width: 100%; border: 1.5px solid var(--line); background: var(--surface); border-radius: 12px; padding: 12px 14px; font-size: 17px; min-height: 50px; }
+.pill.room { color: var(--ink); background: var(--sunken); text-transform: none; letter-spacing: 0; }
 .sheet { position: fixed; inset: 0; z-index: 40; background: var(--bg); overflow-y: auto; -webkit-overflow-scrolling: touch; padding-top: env(safe-area-inset-top, 0px); }
 .sheet .top { top: 0; }
 .form { display: flex; flex-direction: column; gap: 18px; padding-block: 16px 150px; }
@@ -213,6 +246,7 @@ h1, h2, h3 { font-family: var(--f-display); letter-spacing: .01em; line-height: 
   <header class="top">
     <div class="wrap">
       <h1><span class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent-ink)"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><span>Top Snagger</span></h1>
+      <button class="textbtn" id="plansBtn" type="button">Layouts</button>
       <button class="textbtn" id="selectBtn" type="button">Select</button>
       <button class="iconbtn" id="menuBtn" type="button" aria-label="More options" aria-haspopup="true"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
     </div>
@@ -258,6 +292,7 @@ h1, h2, h3 { font-family: var(--f-display); letter-spacing: .01em; line-height: 
       </div>
     </header>
     <div class="wrap form">
+      <div class="roomchip" id="edRoom" hidden><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.3-7-12a7 7 0 0 1 14 0c0 5.7-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/></svg><span id="edRoomName"></span><button type="button" id="edRoomClear">Remove</button></div>
       <div class="field">
         <span class="label">Photos</span>
         <div class="photos" id="edPhotos"></div>
@@ -267,6 +302,11 @@ h1, h2, h3 { font-family: var(--f-display); letter-spacing: .01em; line-height: 
         </div>
         <input type="file" id="camInput" accept="image/*" capture="environment" class="visually-hidden">
         <input type="file" id="galInput" accept="image/*" multiple class="visually-hidden">
+      </div>
+
+      <div class="field">
+        <label for="f-work">Category</label>
+        <select id="f-work"><option value="">Choose a category…</option><option>Walls</option><option>Taping and jointing</option><option>Decoration</option><option>Window sills</option><option>Skirting</option><option>DPM and screed</option><option>Final decoration</option><option>Facings</option><option>Flooring</option><option>Other</option></select>
       </div>
 
       <div class="field">
@@ -358,6 +398,34 @@ h1, h2, h3 { font-family: var(--f-display); letter-spacing: .01em; line-height: 
     </div>
   </section>
 
+  <!-- building layouts -->
+  <section class="sheet" id="plans" hidden aria-label="Building layouts">
+    <header class="top">
+      <div class="wrap">
+        <button class="iconbtn" id="plansBack" type="button" aria-label="Back to snags"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <h1><span>Building layouts</span></h1>
+      </div>
+    </header>
+    <div class="wrap form">
+      <div class="list" id="planList" style="padding-block:0"></div>
+      <label class="btn primary block" for="planInput"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Add a layout (PDF or image)</label>
+      <input type="file" id="planInput" accept="image/*,application/pdf,.pdf" multiple class="visually-hidden">
+    </div>
+  </section>
+  <section class="sheet" id="planView" hidden aria-label="Layout">
+    <header class="top">
+      <div class="wrap">
+        <button class="iconbtn" id="planBack" type="button" aria-label="Back to layouts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <h1><span id="planTitle">Layout</span></h1>
+        <button class="textbtn" id="editRoomsBtn" type="button">Edit rooms</button>
+      </div>
+    </header>
+    <div class="wrap planbar"><span class="hinttext" id="planHint"></span>
+      <span class="zoom"><button type="button" id="zoomOut" aria-label="Zoom out">−</button><span id="zoomLbl" class="num">100%</span><button type="button" id="zoomIn" aria-label="Zoom in">+</button></span></div>
+    <div class="planscroll"><div class="planbox" id="planBox"><img id="planImg" alt="Building layout"><svg id="planSvg" xmlns="http://www.w3.org/2000/svg"></svg></div></div>
+    <div class="roompanel" id="roomPanel" hidden></div>
+  </section>
+
   <!-- settings -->
   <section class="sheet" id="settings" hidden aria-label="Settings">
     <header class="top">
@@ -409,8 +477,9 @@ const req = r => new Promise((res, rej) => { r.onsuccess = () => res(r.result); 
 function openDB() {
   return new Promise(res => {
     try {
-      const r = indexedDB.open('snag-recorder', 1);
-      r.onupgradeneeded = () => { const d = r.result; d.createObjectStore('records', { keyPath: 'id' }); d.createObjectStore('meta'); };
+      const r = indexedDB.open('snag-recorder', 2);
+      r.onupgradeneeded = () => { const d = r.result; const has = n => d.objectStoreNames.contains(n);
+        if (!has('records')) d.createObjectStore('records', { keyPath: 'id' }); if (!has('meta')) d.createObjectStore('meta'); if (!has('plans')) d.createObjectStore('plans', { keyPath: 'id' }); };
       r.onsuccess = () => res(r.result); r.onerror = () => res(null); r.onblocked = () => res(null);
       setTimeout(() => res(null), 4000);
     } catch { res(null); }
@@ -448,7 +517,7 @@ function toast(msg) {
 function matches(r) {
   if (filter !== 'all' && r.status !== filter) return false;
   if (!query) return true;
-  const hay = [refStr(r.ref), r.location, r.element, r.description, r.action, r.trade, r.site, r.raw, CAT[r.category]].join(' ').toLowerCase();
+  const hay = [refStr(r.ref), roomLabel(r), r.work, r.location, r.element, r.description, r.action, r.trade, r.site, r.raw, CAT[r.category]].join(' ').toLowerCase();
   return query.toLowerCase().split(/\s+/).every(w => hay.includes(w));
 }
 function renderList() {
@@ -474,7 +543,7 @@ function renderList() {
         ${r.photos.length > 1 ? `<span class="count num">${r.photos.length}</span>` : ''}
         ${selectMode ? `<span class="tick">${ICON.tick}</span>` : ''}</span>
       <span class="body">
-        <span class="row1"><span class="ref num">${refStr(r.ref)}</span><span class="pill ${r.category}">${CAT[r.category]}</span><span class="pill ${r.status}">${STATUS[r.status]}</span>${r.example ? '<span class="pill example">Example</span>' : ''}</span>
+        <span class="row1"><span class="ref num">${refStr(r.ref)}</span><span class="pill ${r.category}">${CAT[r.category]}</span><span class="pill ${r.status}">${STATUS[r.status]}</span>${r.work ? `<span class="pill room">${esc(r.work)}</span>` : ''}${r.example ? '<span class="pill example">Example</span>' : ''}</span>
         <span class="loc">${esc(r.location) || (r.raw ? esc(r.raw.slice(0, 60)) : '<i style="opacity:.6">No details yet</i>')}</span>
         ${r.description || r.element ? `<span class="desc">${r.element ? '<b>' + esc(r.element) + '.</b> ' : ''}${esc(r.description)}</span>` : ''}
         <span class="meta">${fmtDateTime(r.createdAt)}${r.trade ? ' · ' + esc(r.trade) : ''}</span>
@@ -520,12 +589,13 @@ $('#restoreInput').onchange = e => { $('#menu').hidden = true; const f = e.targe
 
 /* ---------------- editor ---------------- */
 let saveT = null;
-const isBlank = r => !r.photos.length && !r.raw && !r.location && !r.description && !r.action && !r.trade && !r.element;
-async function openEditor(r) {
+const isBlank = r => !r.photos.length && !r.work && !r.raw && !r.location && !r.description && !r.action && !r.trade && !r.element;
+async function openEditor(r, ctx) {
   stopVoice();
   curIsNew = !r;
   if (r) cur = structuredClone ? { ...r, photos: [...r.photos] } : r;
-  else cur = { id: uid(), ref: 0, createdAt: Date.now(), updatedAt: Date.now(), site: settings.project || (await db.get('lastSite', '')), raw: '', element: '', location: '', description: '', action: '', trade: '', tidiedRaw: '', category: 'defect', status: 'open', photos: [] };
+  else cur = { id: uid(), ref: 0, createdAt: Date.now(), updatedAt: Date.now(), site: settings.project || (await db.get('lastSite', '')), raw: '', element: '', location: '', description: '', action: '', trade: '', tidiedRaw: '', category: 'defect', status: 'open', photos: [], work: '' };
+  if (!r && ctx) { Object.assign(cur, ctx); cur.location = roomLabel(cur); }
   $('#edTitle').textContent = r ? refStr(r.ref) : 'New snag';
   $('#edSaved').textContent = r ? 'Saved' : '';
   fillEditor(); setTidyNote();
@@ -575,8 +645,8 @@ async function closeEditor(fromDelete) {
   stopVoice();
   if (!fromDelete && cur) await saveCurrent();
   cur = null;
-  $('#editor').hidden = true; document.body.style.overflow = '';
-  renderList();
+  $('#editor').hidden = true; document.body.style.overflow = $('#planView').hidden && $('#plans').hidden ? '' : 'hidden';
+  renderList(); refreshPlanViews();
   if (location.hash === '#snag') history.back();
 }
 $('#edDone').onclick = async () => { await autoTidy(); closeEditor(false); };
@@ -728,8 +798,8 @@ const ELEMENTS = [
   ['Cladding panel', /\bpanels?\b|\bcladding\b|\bsheets?\b/]
 ];
 const LOC_RE = /\b(grid ?lines?|grids?|elevation|level|floor|bay|tipping hall|reception hall|bunker|boiler (house|hall)|turbine (hall|house)|flue gas|fgt|apc|stack|chimney|admin|office|welfare|workshop|weighbridge|ash|ibaa|bottom ash|silo|roof|parapet|stair|tower|north|south|east|west|corner|gable|plant room|substation|transformer|annex|link bridge|elevation)\b/i;
-const ACT_RE = /\b(needs?|requires?|required|to be|must|should|please|replace|replacing|re-?fix|re-?seal|re-?fit|re-?instate|re-?align|install|fit|complete|make good|remove|repair|tighten|adjust|clean|touch[- ]?up|paint|straighten|supply|seal|rectify|action)\b/i;
-const TRADE_RE = /\b(cladding (contractor|subcontractor|sub-contractor|team)|cladders?|roofers?|roofing contractor|steelwork( contractor)?|steel erectors?|groundworks|m ?(and|&) ?e|electricians?|mechanical contractor|glaziers?|scaffold(ers?|ing)?|main contractor|principal contractor|[a-z]+ (contractor|subcontractor))\b/i;
+const ACT_RE = /\b(needs?|requires?|required|to be|must|should|please|replace|replacing|re-?fix|re-?seal|re-?fit|re-?instate|re-?align|install|fit|complete|make good|remove|repair|tighten|adjust|clean|touch[- ]?up|paint|straighten|supply|seal|rectify|action|fill|sand|re-?decorate|decorate|re-?paint|re-?tape|caulk|grind|level)\b/i;
+const TRADE_RE = /\b(cladding (contractor|subcontractor|sub-contractor|team)|cladders?|roofers?|roofing contractor|steelwork( contractor)?|steel erectors?|groundworks|m ?(and|&) ?e|electricians?|mechanical contractor|glaziers?|scaffold(ers?|ing)?|main contractor|principal contractor|joiners?|carpenters?|plasterers?|dry ?liners?|dry ?lining|tapers?|decorators?|painters?|floor(ing)? (layers?|contractor)|bricklayers?|screeders?|tilers?|[a-z]+ (contractor|subcontractor))\b/i;
 const DAMAGE_RE = /\b(damage[sd]?|dent(s|ed)?|scratch(es|ed)?|impact(ed)?|bent|crushed|gouged|torn|broken|cracked|holed|punctured|scuffed|creased|buckled)\b/i;
 const INCOMPLETE_RE = /\b(missing|not (yet )?(fitted|installed|complete|completed|finished|done|fixed|sealed)|incomplete|outstanding|still to|yet to|unfinished|left off|omitted|to be (fitted|installed|completed))\b/i;
 
@@ -756,7 +826,7 @@ function sentence(t) {
 }
 const stripEnd = t => t.replace(/[.\s]+$/, '');
 
-function localTidy(raw) {
+function localTidy(raw, opts = {}) {
   const text = cleanText(raw);
   const out = { category: 'defect', location: '', element: '', description: '', action: '', trade: '' };
   if (!text) return out;
@@ -786,7 +856,7 @@ function localTidy(raw) {
       const pl = p.toLowerCase();
       const tm = pl.match(TRADE_RE);
       if (tm && p.split(' ').length <= 6) { out.trade = out.trade || p; return; }
-      if (!out.location && i === 0 && LOC_RE.test(pl)) {
+      if (!opts.noLoc && !out.location && i === 0 && LOC_RE.test(pl)) {
         // a first clause that is mostly location; split off the issue if the element is mentioned in it
         const em = firstEl(pl);
         const cut = em ? pl.lastIndexOf(',', em.index) : -1;
@@ -875,10 +945,14 @@ async function tidyCurrent() {
   const btn = $('#tidyBtn'); const old = btn.innerHTML; btn.disabled = true; btn.textContent = 'Tidying…';
   let res = null, how = 'phone', err = '';
   try { res = await smartTidy(raw); if (res) how = 'claude'; } catch (e) { err = e?.message || ''; }
-  if (!res) { try { res = localTidy(raw); } catch { res = { category: cur.category, location: '', element: '', description: sentence(raw), action: '', trade: '' }; } }
+  let local = false;
+  if (!res) { local = true; try { res = localTidy(raw, { noLoc: !!cur.planId }); } catch { res = { category: cur.category, location: '', element: '', description: sentence(raw), action: '', trade: '' }; } }
   const target = cur; if (!target) return;
   ['location', 'element', 'description', 'action', 'trade'].forEach(k => { target[k] = String(res[k] || '').trim(); });
   if (CAT[res.category]) target.category = res.category;
+  if (target.planId && local) target.element = '';
+  if (target.planId) { const rl = roomLabel(target); const rn = (rl.split(' · ')[0] || '').toLowerCase(); if (rl && !target.location.toLowerCase().includes(rn)) target.location = rl + (target.location ? ', ' + target.location : ''); }
+  if (!target.workSet && !target.work) target.work = guessWork(raw);
   target.tidiedRaw = raw; target.tidiedBy = how;
   fillEditor(); btn.disabled = false; btn.innerHTML = old;
   setTidyNote();
@@ -896,6 +970,7 @@ function setTidyNote() {
 }
 function fillEditor() {
   $$('#editor [data-k]').forEach(el => { el.value = cur[el.dataset.k] || ''; });
+  $('#f-work').value = cur.work || ''; renderEdRoom();
   $('#recordCard').hidden = !(cur.tidiedRaw || cur.location || cur.description || cur.action || cur.element || cur.trade);
   setSeg('#edCat', cur.category); setSeg('#edStatus', cur.status);
 }
@@ -914,15 +989,275 @@ $$('#settings [data-s]').forEach(el => el.addEventListener('input', () => { sett
 $('#settingsBtn').onclick = () => { $('#menu').hidden = true; openSettings(); };
 $('#setBack').onclick = closeSettings;
 
+/* ---------------- building layouts (plans with clickable rooms) ---------------- */
+const WORK = ['Walls', 'Taping and jointing', 'Decoration', 'Window sills', 'Skirting', 'DPM and screed', 'Final decoration', 'Facings', 'Flooring', 'Other'];
+const WORK_RE = [
+  ['Taping and jointing', /\b(tap(e|ing)|joint(s|ing)?( compound)?|jointing|screw pops?|nail pops?|feather(ed|ing)?|fill(er|ing)?)\b/i],
+  ['Final decoration', /\bfinal (coat|decoration|decor|paint)\b|\btop coat\b/i],
+  ['Decoration', /\b(paint(ed|ing)?|decorat(ion|ing|or)|mist coat|emulsion|gloss|undercoat|decor|runs?|drips?|missed (bits|areas?))\b/i],
+  ['Window sills', /\b(window ?(sill|cill|board)s?|sills?|cills?)\b/i],
+  ['Skirting', /\bskirting( boards?)?\b/i],
+  ['DPM and screed', /\b(screed|dpm|damp[- ]proof (membrane|course)|levell?ing compound|self[- ]levell?ing)\b/i],
+  ['Facings', /\b(facings?|facing bricks?|brickwork|pointing|mortar)\b/i],
+  ['Flooring', /\b(floor(ing)?|vinyl|carpet|lvt|floor tiles?|safety floor|threshold)\b/i],
+  ['Walls', /\b(walls?|plasterboard|board(ing)?|stud(work)?|partition|blockwork|plaster(ing)?|render)\b/i]
+];
+const guessWork = t => (WORK_RE.find(([, re]) => re.test(t)) || [''])[0];
+
+let plans = [];
+const planById = id => plans.find(p => p.id === id);
+const roomLabel = r => { const p = planById(r.planId); const room = p && p.rooms.find(x => x.id === r.roomId); return room ? room.name + (plans.length > 1 ? ' · ' + p.name : '') : (r.roomName || ''); };
+const planDb = {
+  async all() { if (!idb) return []; try { return await req(os('plans').getAll()); } catch { return []; } },
+  async put(p) { if (idb) try { await req(os('plans', 'readwrite').put(p)); } catch (e) { toast('Could not save the layout: ' + (e?.name || 'storage error')); } },
+  async del(id) { if (idb) try { await req(os('plans', 'readwrite').delete(id)); } catch {} }
+};
+const planURLs = new Map();
+const planURL = p => { if (!planURLs.has(p.id)) planURLs.set(p.id, URL.createObjectURL(p.blob)); return planURLs.get(p.id); };
+
+/* --- PDF support (pdf.js loaded only when a PDF is chosen) --- */
+const PDFJS_SRC = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+let pdfjsReady;
+const loadScript = src => new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('Could not load ' + src)); document.head.append(s); });
+function loadPdfjs() {
+  pdfjsReady ??= (async () => {
+    await loadScript(PDFJS_SRC);
+    await loadScript(PDFJS_SRC.replace('pdf.min.js', 'pdf.worker.min.js'));  // runs pdf.js on the page, no worker needed
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_SRC.replace('pdf.min.js', 'pdf.worker.min.js');
+    return window.pdfjsLib;
+  })();
+  pdfjsReady.catch(() => { pdfjsReady = null; });
+  return pdfjsReady;
+}
+const canvasToBlob = (c, q = 0.85) => new Promise(r => c.toBlob(r, 'image/jpeg', q));
+async function pdfToImages(file) {
+  const lib = await loadPdfjs();
+  const pdf = await lib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+  const out = [];
+  for (let n = 1; n <= Math.min(pdf.numPages, 30); n++) {
+    const page = await pdf.getPage(n);
+    const v1 = page.getViewport({ scale: 1 });
+    const scale = Math.min(4, 3000 / Math.max(v1.width, v1.height));
+    const vp = page.getViewport({ scale });
+    const c = document.createElement('canvas'); c.width = Math.round(vp.width); c.height = Math.round(vp.height);
+    const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+    await page.render({ canvasContext: g, viewport: vp }).promise;
+    out.push({ blob: await canvasToBlob(c), w: c.width, h: c.height, page: n, pages: pdf.numPages });
+  }
+  return out;
+}
+async function imageToPlan(file) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
+    let w = img.naturalWidth, h = img.naturalHeight; const k = Math.min(1, 3000 / Math.max(w, h));
+    w = Math.round(w * k); h = Math.round(h * k);
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); g.drawImage(img, 0, 0, w, h);
+    return { blob: await canvasToBlob(c), w, h };
+  } finally { URL.revokeObjectURL(url); }
+}
+async function addPlanFiles(files) {
+  if (!files.length) return;
+  let added = 0;
+  for (const f of files) {
+    const base = f.name.replace(/\.[^.]+$/, '');
+    try {
+      if (f.type === 'application/pdf' || /\.pdf$/i.test(f.name)) {
+        toast('Opening ' + f.name + '…');
+        const pages = await pdfToImages(f);
+        for (const pg of pages) { const p = { id: uid(), name: pg.pages > 1 ? `${base} (page ${pg.page})` : base, blob: pg.blob, w: pg.w, h: pg.h, rooms: [], createdAt: Date.now() }; plans.push(p); await planDb.put(p); added++; }
+      } else {
+        const im = await imageToPlan(f);
+        const p = { id: uid(), name: base || 'Layout', ...im, rooms: [], createdAt: Date.now() }; plans.push(p); await planDb.put(p); added++;
+      }
+    } catch (e) { toast(`Could not open ${f.name}. ${/pdf/i.test(f.name) ? 'Try saving the drawing as an image instead.' : ''}`); }
+  }
+  renderPlans();
+  if (added === 1) openPlan(plans[plans.length - 1].id, true);
+  else if (added) toast(`Added ${added} layouts`);
+}
+
+/* --- plans list --- */
+const openCount = (planId, roomId) => records.filter(r => r.planId === planId && (!roomId || r.roomId === roomId) && r.status === 'open').length;
+function renderPlans() {
+  const el = $('#planList');
+  if (!plans.length) {
+    el.innerHTML = `<div class="empty" style="padding:24px 8px"><h2>No layouts yet</h2><p>Add a floor plan as a PDF, an image or a photo of the drawing. Then mark the rooms on it, and tap a room to record a snag there.</p></div>`;
+    return;
+  }
+  el.innerHTML = plans.map(p => `<button type="button" class="card plancard" data-pid="${p.id}">
+      <span class="thumb"><img src="${planURL(p)}" alt=""></span>
+      <span class="body"><span class="loc">${esc(p.name)}</span>
+      <span class="meta">${p.rooms.length} room${p.rooms.length === 1 ? '' : 's'} · ${openCount(p.id)} open snag${openCount(p.id) === 1 ? '' : 's'}</span></span></button>`).join('');
+}
+$('#planList').addEventListener('click', e => { const c = e.target.closest('[data-pid]'); if (c) openPlan(c.dataset.pid); });
+$('#planInput').addEventListener('change', e => { const f = [...e.target.files]; e.target.value = ''; addPlanFiles(f); });
+function openPlans() {
+  renderPlans(); $('#plans').hidden = false; document.body.style.overflow = 'hidden';
+  if (location.hash !== '#plans') history.pushState(null, '', '#plans');
+}
+function closePlans() { $('#plans').hidden = true; document.body.style.overflow = ''; if (location.hash === '#plans') history.back(); }
+$('#plansBtn').onclick = openPlans;
+$('#plansBack').onclick = closePlans;
+
+/* --- plan viewer and room editor --- */
+let plan = null, editing = false, zoom = 1, draft = null, panelRoom = null;
+function openPlan(id, startEditing) {
+  plan = planById(id); if (!plan) return;
+  editing = !!startEditing && !plan.rooms.length; zoom = 1; panelRoom = null;
+  $('#planTitle').textContent = plan.name;
+  $('#planImg').src = planURL(plan);
+  $('#planSvg').setAttribute('viewBox', `0 0 ${plan.w} ${plan.h}`);
+  $('#planView').hidden = false; $('#planView').scrollTop = 0;
+  applyZoom(); renderPlan(); hideRoomPanel();
+  if (location.hash !== '#plan') history.pushState(null, '', '#plan');
+}
+function closePlan() { $('#planView').hidden = true; plan = null; renderPlans(); if (location.hash === '#plan') history.back(); }
+$('#planBack').onclick = closePlan;
+function applyZoom() { $('#planBox').style.width = (zoom * 100) + '%'; $('#zoomLbl').textContent = Math.round(zoom * 100) + '%'; }
+$('#zoomIn').onclick = () => { zoom = Math.min(4, zoom * 1.5); applyZoom(); };
+$('#zoomOut').onclick = () => { zoom = Math.max(1, zoom / 1.5); applyZoom(); };
+$('#editRoomsBtn').onclick = () => { editing = !editing; hideRoomPanel(); renderPlan(); };
+function renderPlan() {
+  if (!plan) return;
+  const svg = $('#planSvg'); const fs = Math.max(plan.w, plan.h) / 24;
+  svg.classList.toggle('editing', editing);
+  $('#editRoomsBtn').textContent = editing ? 'Finish' : 'Edit rooms';
+  $('#editRoomsBtn').classList.toggle('on', editing);
+  $('#planHint').textContent = editing
+    ? 'Drag a box over each room to mark it. Tap a marked room to rename or remove it.'
+    : plan.rooms.length ? 'Tap a room to see its snags or record a new one.' : 'No rooms marked yet. Tap Edit rooms to mark them.';
+  svg.innerHTML = plan.rooms.map(r => {
+    const n = openCount(plan.id, r.id);
+    return `<g class="room${n ? ' has' : ''}${panelRoom === r.id ? ' sel' : ''}" data-rid="${r.id}">
+      <rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" rx="${fs / 4}"></rect>
+      <text x="${r.x + r.w / 2}" y="${r.y + r.h / 2}" font-size="${Math.min(fs, r.h / 2.2, r.w / Math.max(3, r.name.length * 0.62))}">${esc(r.name)}</text>
+      ${n ? `<circle cx="${r.x + r.w - fs * 0.5}" cy="${r.y + fs * 0.5}" r="${fs * 0.42}"></circle><text class="n" x="${r.x + r.w - fs * 0.5}" y="${r.y + fs * 0.5}" font-size="${fs * 0.5}">${n}</text>` : ''}
+    </g>`;
+  }).join('') + (draft ? `<rect class="draft" x="${Math.min(draft.x0, draft.x1)}" y="${Math.min(draft.y0, draft.y1)}" width="${Math.abs(draft.x1 - draft.x0)}" height="${Math.abs(draft.y1 - draft.y0)}"></rect>` : '');
+}
+function svgPoint(e) {
+  const b = $('#planSvg').getBoundingClientRect();
+  return { x: Math.max(0, Math.min(plan.w, (e.clientX - b.left) / b.width * plan.w)), y: Math.max(0, Math.min(plan.h, (e.clientY - b.top) / b.height * plan.h)) };
+}
+const svg = $('#planSvg');
+svg.addEventListener('pointerdown', e => {
+  if (!plan || !editing || e.target.closest('.room')) return;
+  e.preventDefault(); svg.setPointerCapture(e.pointerId);
+  const p = svgPoint(e); draft = { x0: p.x, y0: p.y, x1: p.x, y1: p.y }; renderPlan();
+});
+svg.addEventListener('pointermove', e => { if (!draft) return; const p = svgPoint(e); draft.x1 = p.x; draft.y1 = p.y; renderPlan(); });
+svg.addEventListener('pointerup', () => {
+  if (!draft) return;
+  const r = { x: Math.min(draft.x0, draft.x1), y: Math.min(draft.y0, draft.y1), w: Math.abs(draft.x1 - draft.x0), h: Math.abs(draft.y1 - draft.y0) };
+  draft = null;
+  if (r.w < plan.w * 0.015 || r.h < plan.h * 0.015) { renderPlan(); return; }
+  const room = { id: uid(), name: 'Room ' + (plan.rooms.length + 1), ...Object.fromEntries(Object.entries(r).map(([k, v]) => [k, Math.round(v)])) };
+  plan.rooms.push(room); planDb.put(plan); panelRoom = room.id; renderPlan(); showRoomEditor(room, true);
+});
+svg.addEventListener('pointercancel', () => { draft = null; renderPlan(); });
+svg.addEventListener('click', e => {
+  const g = e.target.closest('.room'); if (!g || !plan) return;
+  const room = plan.rooms.find(r => r.id === g.dataset.rid); if (!room) return;
+  panelRoom = room.id; renderPlan();
+  editing ? showRoomEditor(room, false) : showRoomSnags(room);
+});
+function hideRoomPanel() { $('#roomPanel').hidden = true; panelRoom = null; if (plan) renderPlan(); }
+function showRoomEditor(room, isNew) {
+  const p = $('#roomPanel'); p.hidden = false;
+  p.innerHTML = `<div class="wrap rp">
+    <label class="label" for="roomName">${isNew ? 'Name this room' : 'Room name'}</label>
+    <input type="text" id="roomName" value="${esc(room.name)}" autocomplete="off">
+    <div class="rprow"><button class="btn danger" type="button" id="roomDel">Remove</button><button class="btn primary" type="button" id="roomSave">Save</button></div></div>`;
+  const inp = $('#roomName'); inp.focus(); inp.select();
+  const save = () => { room.name = inp.value.trim() || room.name; planDb.put(plan); hideRoomPanel(); };
+  inp.onkeydown = e => { if (e.key === 'Enter') save(); };
+  $('#roomSave').onclick = save;
+  $('#roomDel').onclick = () => {
+    const n = records.filter(r => r.planId === plan.id && r.roomId === room.id).length;
+    if (n && $('#roomDel').dataset.sure !== '1') { $('#roomDel').dataset.sure = '1'; $('#roomDel').textContent = `Remove (keeps its ${n} snag${n > 1 ? 's' : ''})`; return; }
+    records.filter(r => r.planId === plan.id && r.roomId === room.id).forEach(r => { r.roomName = room.name; db.put(r); });
+    plan.rooms = plan.rooms.filter(r => r.id !== room.id); planDb.put(plan); hideRoomPanel();
+  };
+}
+function showRoomSnags(room) {
+  const list = records.filter(r => r.planId === plan.id && r.roomId === room.id).sort((a, b) => (a.status === b.status ? b.ref - a.ref : a.status === 'open' ? -1 : 1));
+  const p = $('#roomPanel'); p.hidden = false;
+  p.innerHTML = `<div class="wrap rp">
+    <div class="rphead"><h2>${esc(room.name)}</h2><button class="iconbtn" type="button" id="rpClose" aria-label="Close">${ICON.x}</button></div>
+    <div class="rplist">${list.length ? list.map(r => `<button type="button" class="rpitem" data-id="${r.id}"><span class="ref num">${refStr(r.ref)}</span><span class="rptext">${esc(r.work ? r.work + ': ' : '')}${esc(r.description || r.raw || 'No details yet')}</span><span class="pill ${r.status}">${STATUS[r.status]}</span></button>`).join('') : '<p class="settings-note">No snags in this room yet.</p>'}</div>
+    <button class="btn primary block" type="button" id="rpNew">${ICON.cam}New snag in ${esc(room.name)}</button></div>`;
+  $('#rpClose').onclick = hideRoomPanel;
+  $('#rpNew').onclick = () => openEditor(null, { planId: plan.id, roomId: room.id });
+  $$('.rpitem', p).forEach(b => b.onclick = () => openEditor(byId(b.dataset.id)));
+}
+function refreshPlanViews() {
+  if (!$('#planView').hidden && plan) { renderPlan(); const room = plan.rooms.find(r => r.id === panelRoom); if (room && !editing && !$('#roomPanel').hidden) showRoomSnags(room); }
+  if (!$('#plans').hidden) renderPlans();
+}
+
+/* --- room on the snag editor --- */
+function renderEdRoom() {
+  const w = $('#edRoom');
+  if (!cur || !cur.planId && !cur.roomName) { w.hidden = true; return; }
+  w.hidden = false;
+  $('#edRoomName').textContent = roomLabel(cur) || 'Room removed';
+}
+$('#edRoomClear').onclick = () => { if (!cur) return; delete cur.planId; delete cur.roomId; delete cur.roomName; renderEdRoom(); queueSave(); };
+$('#f-work').addEventListener('change', e => { if (!cur) return; cur.work = e.target.value; cur.workSet = true; queueSave(); });
+
+/* --- layout images for the report: each plan with the reported rooms marked --- */
+async function planFigure(p, items) {
+  const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = planURL(p); });
+  const k = Math.min(1, 2000 / Math.max(p.w, p.h));
+  const c = document.createElement('canvas'); c.width = Math.round(p.w * k); c.height = Math.round(p.h * k);
+  const g = c.getContext('2d'); g.drawImage(img, 0, 0, c.width, c.height);
+  const fs = Math.max(16, Math.round(Math.max(c.width, c.height) / 45));
+  for (const room of p.rooms) {
+    const refs = items.filter(it => it.planId === p.id && it.roomId === room.id).map(it => refStr(it.ref));
+    if (!refs.length) continue;
+    const x = room.x * k, y = room.y * k, w = room.w * k, h = room.h * k;
+    g.fillStyle = 'rgba(217,45,32,0.12)'; g.fillRect(x, y, w, h);
+    g.strokeStyle = '#d92d20'; g.lineWidth = Math.max(2, fs / 6); g.strokeRect(x, y, w, h);
+    g.font = `600 ${fs}px Arial, sans-serif`; g.textBaseline = 'top';
+    const label = room.name + ': ' + refs.join(', '); const tw = g.measureText(label).width;
+    g.fillStyle = '#d92d20'; g.fillRect(x, y, Math.min(tw + fs * 0.6, Math.max(w, tw + fs * 0.6)), fs * 1.4);
+    g.fillStyle = '#fff'; g.fillText(label, x + fs * 0.3, y + fs * 0.2);
+  }
+  const blob = await canvasToBlob(c, 0.85);
+  return { name: p.name, blob, bytes: new Uint8Array(await blob.arrayBuffer()), w: c.width, h: c.height, url: URL.createObjectURL(blob) };
+}
+async function reportFigures() {
+  const ids = [...new Set(report.items.map(it => it.planId).filter(Boolean))];
+  const out = [];
+  for (const id of ids) { const p = planById(id); if (p) try { out.push(await planFigure(p, report.items)); } catch {} }
+  return out;
+}
+
+/* --- plans in backups --- */
+async function plansForBackup() {
+  return Promise.all(plans.map(async p => ({ ...p, blob: undefined, data: await blobToDataURL(p.blob) })));
+}
+async function restorePlans(list) {
+  let n = 0;
+  for (const p of list || []) {
+    if (planById(p.id) || !p.data) continue;
+    const plan = { ...p, blob: await (await fetch(p.data)).blob() }; delete plan.data;
+    plans.push(plan); await planDb.put(plan); n++;
+  }
+  return n;
+}
+
 /* ---------------- report ---------------- */
 async function buildReport() {
-  const chosen = records.filter(r => selected.has(r.id)).sort((a, b) => a.ref - b.ref);
+  const chosen = records.filter(r => selected.has(r.id)).sort((a, b) => (roomLabel(a) || '\uffff').localeCompare(roomLabel(b) || '\uffff', 'en', { numeric: true }) || a.ref - b.ref);
   const defaults = await db.get('reportDefaults', {});
   const sites = [...new Set(chosen.map(r => r.site).filter(Boolean))];
   report = {
     title: 'Snagging report', site: sites.join(', '), client: defaults.client || '', preparedBy: settings.preparedBy || defaults.preparedBy || '',
     date: todayISO(), notes: '',
-    items: chosen.map(r => ({ id: r.id, ref: r.ref, category: r.category, status: r.status, location: r.location, element: r.element || '', description: r.description, action: r.action, trade: r.trade, photoIds: r.photos.map(p => p.id) }))
+    items: chosen.map(r => ({ id: r.id, ref: r.ref, planId: r.planId, roomId: r.roomId, room: roomLabel(r), work: r.work || '', category: r.category, status: r.status, location: r.location, element: r.element || '', description: r.description, action: r.action, trade: r.trade, photoIds: r.photos.map(p => p.id) }))
   };
   openReport();
 }
@@ -956,6 +1291,7 @@ function renderRepItems() {
         </span></header>
       <div class="seg" role="group" aria-label="Type">${Object.entries(CAT).map(([k, v]) => `<button type="button" data-set="category" data-v="${k}" aria-pressed="${it.category === k}">${v}</button>`).join('')}</div>
       <div class="field"><label for="ri-loc-${i}">Location</label><textarea id="ri-loc-${i}" data-f="location" rows="2">${esc(it.location)}</textarea></div>
+      <div class="field"><label for="ri-work-${i}">Category</label><select id="ri-work-${i}" data-f="work"><option value="">None</option>${WORK.map(w => `<option${it.work === w ? ' selected' : ''}>${w}</option>`).join('')}</select></div>
       <div class="field"><label for="ri-el-${i}">Element</label><input type="text" id="ri-el-${i}" data-f="element" value="${esc(it.element)}"></div>
       <div class="field"><label for="ri-desc-${i}">Issue</label><textarea id="ri-desc-${i}" data-f="description" rows="3">${esc(it.description)}</textarea></div>
       <div class="field"><label for="ri-act-${i}">Action required</label><textarea id="ri-act-${i}" data-f="action" rows="3">${esc(it.action)}</textarea></div>
@@ -964,6 +1300,7 @@ function renderRepItems() {
       ${itemPhotos(it).length ? `<div class="photos">${itemPhotos(it).map(p => `<div class="photo"><img src="${photoURL(p)}" alt=""><button class="x" type="button" data-pid="${p.id}" aria-label="Leave this photo out of the report">${ICON.x}</button></div>`).join('')}</div>` : ''}
     </article>`).join('') || `<div class="empty" style="padding:24px"><p>No items left in this report. Go back and select some snags.</p></div>`;
 }
+$('#repItems').addEventListener('change', e => { const el = e.target.closest('select[data-f]'); if (el) report.items[+el.closest('.rep-item').dataset.i][el.dataset.f] = el.value; });
 $('#repItems').addEventListener('input', e => {
   const el = e.target.closest('[data-f]'); if (!el) return;
   report.items[+el.closest('.rep-item').dataset.i][el.dataset.f] = el.value;
@@ -1011,16 +1348,24 @@ async function makeDocx() {
   if (report.notes.trim()) children.push(new D.Paragraph({ children: runs(report.notes), spacing: { before: 240 } }));
 
   // schedule
-  const cols = [900, 2400, 1900, 3338, 1100];
-  const head = ['Ref', 'Location', 'Element', 'Action required', 'Status'];
+  const cols = [900, 2600, 1700, 3338, 1100];
+  const head = ['Ref', 'Location', 'Category', 'Action required', 'Status'];
   children.push(new D.Paragraph({ heading: D.HeadingLevel.HEADING_1, children: [new D.TextRun('Schedule of items')], spacing: { before: 360, after: 120 } }));
   children.push(new D.Table({
     width: { size: W, type: D.WidthType.DXA }, columnWidths: cols, layout: D.TableLayoutType.FIXED,
     rows: [
       new D.TableRow({ tableHeader: true, children: head.map((h, i) => cell(P(h, { bold: true, size: 18, color: 'FFFFFF' }), cols[i], '16212C')) }),
-      ...report.items.map(it => new D.TableRow({ cantSplit: true, children: [refStr(it.ref), it.location, it.element, it.action, STATUS[it.status]].map((t, i) => cell(P(t || '–', { size: 18 }), cols[i])) }))
+      ...report.items.map(it => new D.TableRow({ cantSplit: true, children: [refStr(it.ref), it.location, it.work, it.action, STATUS[it.status]].map((t, i) => cell(P(t || '–', { size: 18 }), cols[i])) }))
     ]
   }));
+
+  // layouts with the reported rooms marked
+  const figs = await reportFigures();
+  figs.forEach((f, i) => {
+    let w = 640, h = Math.round(w * f.h / f.w); if (h > 820) { h = 820; w = Math.round(h * f.w / f.h); }
+    children.push(new D.Paragraph({ heading: D.HeadingLevel.HEADING_1, children: [new D.TextRun('Layout: ' + f.name)], pageBreakBefore: true, spacing: { after: 120 } }));
+    children.push(new D.Paragraph({ alignment: D.AlignmentType.CENTER, children: [new D.ImageRun({ type: 'jpg', data: f.bytes, transformation: { width: w, height: h } })] }));
+  });
 
   // items
   children.push(new D.Paragraph({ heading: D.HeadingLevel.HEADING_1, children: [new D.TextRun('Item details')], pageBreakBefore: true, spacing: { after: 120 } }));
@@ -1028,7 +1373,7 @@ async function makeDocx() {
   for (const it of report.items) {
     children.push(new D.Paragraph({ heading: D.HeadingLevel.HEADING_2, keepNext: true, spacing: { before: 320, after: 100 },
       children: [new D.TextRun(refStr(it.ref) + '   '), new D.TextRun({ text: it.location || 'Location not recorded' })] }));
-    children.push(kv([['Type', CAT[it.category]], ['Element', it.element], ['Status', STATUS[it.status]], ['Issue', it.description], ['Action required', it.action], ['Responsible', it.trade]]));
+    children.push(kv([['Type', CAT[it.category]], ['Category', it.work], ...(it.room ? [['Room', it.room]] : []), ...(it.element ? [['Element', it.element]] : []), ['Status', STATUS[it.status]], ['Issue', it.description], ['Action required', it.action], ['Responsible', it.trade]]));
     const ph = itemPhotos(it);
     if (ph.length) {
       const imgs = [];
@@ -1088,17 +1433,19 @@ $('#shareBtn').onclick = () => {
     try { await navigator.share({ files: [file], title: report.title }); } catch (e) { if (e?.name !== 'AbortError') throw new Error('Sharing failed. Use Word (.docx) to save the file instead.'); }
   });
 };
-$('#printBtn').onclick = () => {
+$('#printBtn').onclick = async () => {
+  const figs = await reportFigures();
   const dateTxt = report.date ? new Date(report.date + 'T12:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
   const t = s => esc(s).replace(/\n/g, '<br>');
   $('#printArea').innerHTML = `<h1>${esc(report.title)}</h1>
     <table><tr><th>Site / project</th><td>${t(report.site)}</td></tr><tr><th>Client</th><td>${t(report.client)}</td></tr>
     <tr><th>Prepared by</th><td>${t(report.preparedBy)}</td></tr><tr><th>Inspection date</th><td>${dateTxt}</td></tr></table>
     ${report.notes ? `<p>${t(report.notes)}</p>` : ''}
-    <h2>Schedule of items</h2><table><tr><th>Ref</th><th>Location</th><th>Element</th><th>Action required</th><th>Status</th></tr>
-    ${report.items.map(it => `<tr><td>${refStr(it.ref)}</td><td>${t(it.location)}</td><td>${t(it.element)}</td><td>${t(it.action)}</td><td>${STATUS[it.status]}</td></tr>`).join('')}</table>
+    <h2>Schedule of items</h2><table><tr><th>Ref</th><th>Location</th><th>Category</th><th>Action required</th><th>Status</th></tr>
+    ${report.items.map(it => `<tr><td>${refStr(it.ref)}</td><td>${t(it.location)}</td><td>${t(it.work)}</td><td>${t(it.action)}</td><td>${STATUS[it.status]}</td></tr>`).join('')}</table>
+    ${figs.map(f => `<div class="item"><h2>Layout: ${esc(f.name)}</h2><img src="${f.url}" alt="" style="width:100%;max-height:none;border:1px solid #ccc"></div>`).join('')}
     ${report.items.map(it => `<div class="item"><h2>${refStr(it.ref)} &nbsp; ${t(it.location)}</h2>
-      <table><tr><th style="width:25%">Type</th><td>${CAT[it.category]}</td></tr><tr><th>Element</th><td>${t(it.element)}</td></tr><tr><th>Status</th><td>${STATUS[it.status]}</td></tr>
+      <table><tr><th style="width:25%">Type</th><td>${CAT[it.category]}</td></tr><tr><th>Category</th><td>${t(it.work)}</td></tr>${it.room ? `<tr><th>Room</th><td>${t(it.room)}</td></tr>` : ''}${it.element ? `<tr><th>Element</th><td>${t(it.element)}</td></tr>` : ''}<tr><th>Status</th><td>${STATUS[it.status]}</td></tr>
       <tr><th>Issue</th><td>${t(it.description)}</td></tr><tr><th>Action required</th><td>${t(it.action)}</td></tr><tr><th>Responsible</th><td>${t(it.trade)}</td></tr></table>
       <div class="pics">${itemPhotos(it).map(p => `<img src="${photoURL(p)}" alt="">`).join('')}</div></div>`).join('')}`;
   setTimeout(() => window.print(), 300);
@@ -1107,11 +1454,11 @@ $('#printBtn').onclick = () => {
 /* ---------------- backup / restore ---------------- */
 const blobToDataURL = b => new Promise(r => { const f = new FileReader(); f.onload = () => r(f.result); f.readAsDataURL(b); });
 async function backup() {
-  if (!records.length) { toast('There are no snags to back up yet.'); return; }
+  if (!records.length && !plans.length) { toast('There is nothing to back up yet.'); return; }
   toast('Preparing backup…');
   const out = [];
   for (const r of records) out.push({ ...r, photos: await Promise.all(r.photos.map(async p => ({ id: p.id, w: p.w, h: p.h, data: await blobToDataURL(p.blob) }))) });
-  const json = JSON.stringify({ app: 'snag-recorder', version: 1, exportedAt: new Date().toISOString(), nextRef: await db.get('nextRef', 1), records: out });
+  const json = JSON.stringify({ app: 'snag-recorder', version: 1, exportedAt: new Date().toISOString(), nextRef: await db.get('nextRef', 1), records: out, plans: await plansForBackup() });
   await offerFile(new Blob([json], { type: 'application/json' }), 'Top Snagger backup ' + todayISO() + '.json');
 }
 async function restore(file) {
@@ -1124,9 +1471,10 @@ async function restore(file) {
       const rec = { ...r, photos: await Promise.all(r.photos.map(async p => ({ id: p.id, w: p.w, h: p.h, blob: await (await fetch(p.data)).blob() }))) };
       await db.put(rec); records.push(rec); added++;
     }
+    const np = await restorePlans(data.plans);
     const next = Math.max(await db.get('nextRef', 1), data.nextRef || 1, ...records.map(r => r.ref + 1));
     await db.set('nextRef', next);
-    renderList(); toast(added ? `Restored ${added} snag${added > 1 ? 's' : ''}` : 'Those snags are already on this device.');
+    renderList(); toast(added || np ? `Restored ${added} snag${added === 1 ? '' : 's'}${np ? ` and ${np} layout${np === 1 ? '' : 's'}` : ''}` : 'Those snags are already on this device.');
   } catch { toast('That file is not a Top Snagger backup.'); }
 }
 
@@ -1169,6 +1517,8 @@ window.addEventListener('popstate', () => {
   if (!$('#editor').hidden && location.hash !== '#snag') { stopVoice(); saveCurrent().then(() => { cur = null; $('#editor').hidden = true; document.body.style.overflow = ''; renderList(); }); }
   if (!$('#report').hidden && location.hash !== '#report') { $('#report').hidden = true; document.body.style.overflow = ''; }
   if (!$('#settings').hidden && location.hash !== '#setup') { $('#settings').hidden = true; document.body.style.overflow = ''; }
+  if (!$('#planView').hidden && !['#plan', '#snag'].includes(location.hash)) { $('#planView').hidden = true; plan = null; renderPlans(); }
+  if (!$('#plans').hidden && !['#plans', '#plan', '#snag'].includes(location.hash)) { $('#plans').hidden = true; document.body.style.overflow = ''; }
 });
 document.addEventListener('visibilitychange', () => { if (document.hidden && cur) { stopVoice(); saveCurrent(); } });
 
@@ -1179,8 +1529,9 @@ async function start() {
   try { navigator.storage?.persist?.(); } catch {}
   settings = { ...settings, ...(await db.get('settings', {})) };
   records = await db.all();
+  plans = await planDb.all();
   renderList();
-  if (['#snag', '#report', '#setup'].includes(location.hash)) history.replaceState(null, '', location.pathname + location.search);
+  if (['#snag', '#report', '#setup', '#plans', '#plan'].includes(location.hash)) history.replaceState(null, '', location.pathname + location.search);
   if (!inViewer()) {
     $('#printBtn').hidden = false;
     try { if (navigator.canShare && navigator.canShare({ files: [new File(['x'], 'x.docx', { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' })] })) $('#shareBtn').hidden = false; } catch {}
