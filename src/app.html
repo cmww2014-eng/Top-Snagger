@@ -166,6 +166,7 @@ h1, h2, h3 { font-family: var(--f-display); letter-spacing: .01em; line-height: 
 .rbtn.dot circle.hit { fill: transparent; stroke: none; }
 .room text.n { fill: #fff; stroke: none; font-family: var(--f-body); }
 .draft { fill: color-mix(in srgb, var(--focus) 20%, transparent); stroke: var(--focus); stroke-width: 3px; vector-effect: non-scaling-stroke; stroke-dasharray: 6 4; }
+.rpcount { margin: 12px 0 4px; font-size: 14px; font-weight: 600; color: var(--muted); }
 .roompanel { position: fixed; left: 0; right: 0; bottom: 0; z-index: 42; background: var(--surface); border-top: 1px solid var(--line); box-shadow: 0 -6px 24px rgba(0,0,0,.18); border-radius: 16px 16px 0 0; padding-bottom: env(safe-area-inset-bottom, 0px); max-height: 60%; overflow-y: auto; }
 .rp { display: flex; flex-direction: column; gap: 10px; padding-block: 14px; }
 .rp input[type="text"] { width: 100%; border: 1.5px solid var(--line); background: var(--bg); border-radius: 12px; padding: 12px 14px; font-size: 17px; }
@@ -345,6 +346,7 @@ h1, h2, h3 { font-family: var(--f-display); letter-spacing: .01em; line-height: 
       <div class="field">
         <label for="f-work">Category</label>
         <select id="f-work"><option value="">Choose a category…</option><option>Walls</option><option>Taping and jointing</option><option>Decoration</option><option>Window sills</option><option>Skirting</option><option>DPM and screed</option><option>Final decoration</option><option>Facings</option><option>Flooring</option><option>Other</option></select>
+        <input type="text" id="f-workOther" hidden placeholder="Type the category, e.g. Ceilings" autocomplete="off" style="margin-top:8px">
       </div>
 
       <div class="field">
@@ -476,6 +478,8 @@ h1, h2, h3 { font-family: var(--f-display); letter-spacing: .01em; line-height: 
       <div class="field"><label for="s-project">Project</label><input type="text" id="s-project" data-s="project" placeholder="e.g. Energy from Waste facility, cladding package"><p class="settings-note">Used on new snags and in reports.</p></div>
       <div class="field"><label for="s-by">Your name</label><input type="text" id="s-by" data-s="preparedBy" placeholder="Shown as Prepared by on reports"></div>
       <div class="field" id="keyField"><label for="s-key">Claude API key (optional)</label><input type="password" id="s-key" data-s="apiKey" autocomplete="off" placeholder="sk-ant-..."><p class="settings-note">With a key, Tidy up uses Claude to reorder and reword the description when you have signal. Without one, or with no signal, Tidy up uses simpler built-in rules on the phone. The key stays on this phone.</p></div>
+      <div class="field"><label>Snag numbers</label><p class="settings-note" id="refNote"></p>
+        <button class="btn ghost block" type="button" id="refReset" style="margin-top:8px">Start numbers again from S-001</button></div>
     </div>
   </section>
 
@@ -1104,7 +1108,10 @@ function autoTidy() {
 function setTidyNote() {}
 function fillEditor() {
   $$('#editor [data-k]').forEach(el => { el.value = cur[el.dataset.k] || ''; });
-  $('#f-work').value = cur.work || ''; renderEdRoom();
+  const custom = cur.work && !WORK.includes(cur.work);
+  $('#f-work').value = custom ? 'Other' : cur.work || '';
+  $('#f-workOther').hidden = !(custom || cur.work === 'Other'); $('#f-workOther').value = custom ? cur.work : '';
+  renderEdRoom();
   setSeg('#edStatus', cur.status);
 }
 
@@ -1113,7 +1120,7 @@ let settings = { project: 'Energy from Waste plant, cladding package', preparedB
 function openSettings() {
   $$('#settings [data-s]').forEach(el => el.value = settings[el.dataset.s] || '');
   $('#keyField').hidden = inViewer();
-  $('#settings').hidden = false; document.body.style.overflow = 'hidden';
+  $('#settings').hidden = false; showRefNote(); document.body.style.overflow = 'hidden';
   if (location.hash !== '#setup') history.pushState(null, '', '#setup');
 }
 function closeSettings() { $('#settings').hidden = true; document.body.style.overflow = ''; if (location.hash === '#setup') history.back(); }
@@ -1347,7 +1354,7 @@ function renderPlan() {
   $('#editRoomsBtn').textContent = editing ? 'Finish' : 'Edit rooms';
   $('#editRoomsBtn').classList.toggle('on', editing);
   $('#editRoomsBtn').hidden = picking && !editing && plan.rooms.length > 0;
-  $('#planHint').textContent = !editing && plan.rooms.length && homeMode ? 'Tap a room name to record a snag. Pinch to zoom; dots become names.' : picking && !editing ? (plan.rooms.length ? 'Tap the room where the snag is.' : 'No rooms marked on this layout yet. Tap Edit rooms to mark them.') : editing
+  $('#planHint').textContent = !editing && plan.rooms.length && homeMode ? 'Tap a room name to raise a snag. Drag to move, pinch to zoom; dots become names.' : picking && !editing ? (plan.rooms.length ? 'Tap the room where the snag is.' : 'No rooms marked on this layout yet. Tap Edit rooms to mark them.') : editing
     ? 'Drag a box over each room to mark it. Tap a marked room to rename or remove it.'
     : plan.rooms.length ? (homeMode ? 'Tap a room to record a snag there.' : 'Tap a room to see its snags or record a new one.') : 'No rooms marked yet. Tap Edit rooms to mark them.';
   if (!editing) {
@@ -1406,7 +1413,6 @@ svg.addEventListener('click', e => {
   const room = plan.rooms.find(r => r.id === g.dataset.rid); if (!room) return;
   panelRoom = room.id; renderPlan();
   if (picking && !editing) { finishPick({ planId: plan.id, roomId: room.id }); return; }
-  if (homeMode && !editing) { panelRoom = null; renderPlan(); openEditor(null, { planId: plan.id, roomId: room.id }); return; }
   editing ? showRoomEditor(room, false) : showRoomSnags(room);
 });
 function hideRoomPanel() { $('#roomPanel').hidden = true; panelRoom = null; if (plan) renderPlan(); }
@@ -1432,8 +1438,9 @@ function showRoomSnags(room) {
   const p = $('#roomPanel'); p.hidden = false;
   p.innerHTML = `<div class="wrap rp">
     <div class="rphead"><h2>${esc(room.name)}</h2><button class="iconbtn" type="button" id="rpClose" aria-label="Close">${ICON.x}</button></div>
-    <div class="rplist">${list.length ? list.map(r => `<button type="button" class="rpitem" data-id="${r.id}"><span class="ref num">${refStr(r.ref)}</span><span class="rptext">${esc(r.work ? r.work + ': ' : '')}${esc(r.description || r.raw || 'No details yet')}</span><span class="pill ${r.status}">${STATUS[r.status]}</span></button>`).join('') : '<p class="settings-note">No snags in this room yet.</p>'}</div>
-    <button class="btn primary block" type="button" id="rpNew">${ICON.cam}New snag in ${esc(room.name)}</button></div>`;
+    <button class="btn primary block" type="button" id="rpNew">${ICON.cam}Raise snag</button>
+    ${list.length ? `<p class="rpcount">${(n => n ? `${n} open snag${n > 1 ? 's' : ''}` : 'No open snags')(list.filter(r => r.status === 'open').length)}${list.length - list.filter(r => r.status === 'open').length ? `, ${list.length - list.filter(r => r.status === 'open').length} closed` : ''}</p>` : ''}
+    <div class="rplist">${list.length ? list.map(r => `<button type="button" class="rpitem" data-id="${r.id}"><span class="ref num">${refStr(r.ref)}</span><span class="rptext">${esc(r.work ? r.work + ': ' : '')}${esc(r.description || r.raw || 'No details yet')}</span><span class="pill ${r.status}">${STATUS[r.status]}</span></button>`).join('') : '<p class="settings-note">No snags in this room yet.</p>'}</div></div>`;
   $('#rpClose').onclick = hideRoomPanel;
   $('#rpNew').onclick = () => openEditor(null, { planId: plan.id, roomId: room.id });
   $$('.rpitem', p).forEach(b => b.onclick = () => openEditor(byId(b.dataset.id)));
@@ -1549,7 +1556,27 @@ function renderEdRoom() {
   $('#edRoomName').textContent = roomLabel(cur) || 'Room removed';
 }
 $('#edRoomClear').onclick = () => { if (!cur) return; delete cur.planId; delete cur.roomId; delete cur.roomName; renderEdRoom(); queueSave(); };
-$('#f-work').addEventListener('change', e => { if (!cur) return; cur.work = e.target.value; cur.workSet = true; queueSave(); });
+/* --- snag numbers: restart from S-001 --- */
+async function showRefNote() {
+  const n = await db.get('nextRef', 1), b = $('#refReset'); b.dataset.sure = ''; b.className = 'btn ghost block';
+  $('#refNote').textContent = records.length ? `The next snag will be ${refStr(n)}. You have ${records.length} snag${records.length > 1 ? 's' : ''} on this phone. To start again from S-001 they are deleted, so download a backup or report first if you need them.` : `The next snag will be ${refStr(n)}.`;
+  b.textContent = 'Start numbers again from S-001'; b.disabled = !records.length && n === 1;
+}
+$('#refReset').onclick = async () => {
+  const b = $('#refReset');
+  if (records.length && b.dataset.sure !== '1') { b.dataset.sure = '1'; b.className = 'btn danger block'; b.textContent = `Tap again to delete ${records.length > 1 ? `all ${records.length} snags` : `the 1 snag`} and start from S-001`; return; }
+  for (const r of records) await db.del(r.id);
+  records = []; selected.clear(); await db.set('nextRef', 1);
+  renderList(); refreshPlanViews(); showRefNote(); toast('Snag numbers start again from S-001.');
+};
+$('#f-work').addEventListener('change', e => {
+  if (!cur) return; const v = e.target.value, o = $('#f-workOther');
+  o.hidden = v !== 'Other';
+  cur.work = v === 'Other' ? (o.value.trim() || 'Other') : v; cur.workSet = true; queueSave();
+  if (v === 'Other') o.focus();
+});
+// "Other": the typed text becomes the category everywhere (list, reports, Excel)
+$('#f-workOther').addEventListener('input', e => { if (!cur) return; cur.work = e.target.value.trim() || 'Other'; cur.workSet = true; queueSave(); });
 
 /* --- layout images for the report: each plan with the reported rooms marked --- */
 async function planFigure(p, items) {
@@ -1637,7 +1664,7 @@ function renderRepItems() {
           <button type="button" data-act="remove" aria-label="Remove from report">${ICON.x}</button>
         </span></header>
       <div class="field"><label for="ri-loc-${i}">Location</label><textarea id="ri-loc-${i}" data-f="location" rows="2">${esc(it.location)}</textarea></div>
-      <div class="field"><label for="ri-work-${i}">Category</label><select id="ri-work-${i}" data-f="work"><option value="">None</option>${WORK.map(w => `<option${it.work === w ? ' selected' : ''}>${w}</option>`).join('')}</select></div>
+      <div class="field"><label for="ri-work-${i}">Category</label><select id="ri-work-${i}" data-f="work"><option value="">None</option>${(it.work && !WORK.includes(it.work) ? [it.work, ...WORK] : WORK).map(w => `<option${it.work === w ? ' selected' : ''}>${esc(w)}</option>`).join('')}</select></div>
       <div class="field"><label for="ri-desc-${i}">Description</label><textarea id="ri-desc-${i}" data-f="description" rows="3">${esc(it.description)}</textarea></div>
       <div class="seg two" role="group" aria-label="Status">${Object.entries(STATUS).map(([k, v]) => `<button type="button" data-set="status" data-v="${k}" aria-pressed="${it.status === k}">${v}</button>`).join('')}</div>
       ${itemPhotos(it).length ? `<div class="photos">${itemPhotos(it).map(p => `<div class="photo"><img src="${photoURL(p)}" alt=""><button class="x" type="button" data-pid="${p.id}" aria-label="Leave this photo out of the report">${ICON.x}</button></div>`).join('')}</div>` : ''}
@@ -1992,6 +2019,8 @@ async function start() {
   // the demo snags are gone from the app: clear any left on this phone
   for (const r of records.filter(r => r.example)) await db.del(r.id);
   records = records.filter(r => !r.example);
+  // numbering carries on from the highest snag on this phone, and starts at S-001 when there are none
+  await db.set('nextRef', Math.max(0, ...records.map(r => r.ref || 0)) + 1);
   plans = await planDb.all();
   renderList();
   if (['#snag', '#report', '#setup', '#plans', '#plan', '#list'].includes(location.hash)) history.replaceState(null, '', location.pathname + location.search);
