@@ -130,10 +130,11 @@ h1, h2, h3 { font-family: var(--f-display); letter-spacing: .01em; line-height: 
 /* sheets */
 #editor { z-index: 45; }
 .cheer { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; background: color-mix(in srgb, var(--ink) 55%, transparent); animation: cheerfade 1.9s ease forwards; }
-.cheer .card2 { max-width: calc(100% - 48px); background: var(--accent); color: var(--accent-ink); border-radius: 28px; padding: 28px 36px 24px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,.35); animation: cheerpop .45s cubic-bezier(.2,1.6,.4,1) both; }
-.cheer .thumb { font-size: 112px; line-height: 1; display: block; animation: cheerthumb .6s .15s cubic-bezier(.2,1.8,.4,1) both; }
-.cheer .word { font: 700 44px/1 var(--f-display); letter-spacing: .06em; display: block; margin-top: 10px; }
+.cheer .card2 { width: min(78vw, 420px); box-sizing: border-box; background: var(--accent); color: var(--accent-ink); border-radius: 28px; padding: min(7vw, 32px) 16px min(6vw, 28px); text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,.35); animation: cheerin .3s ease both; }
+.cheer .thumb { font-size: min(26vw, 120px); line-height: 1; display: block; }
+.cheer .word { font: 700 min(9vw, 46px)/1 var(--f-display); letter-spacing: .04em; white-space: nowrap; display: block; margin-top: 10px; }
 .cheer .sub { font-weight: 600; font-size: 16px; opacity: .8; display: block; margin-top: 8px; }
+@keyframes cheerin { from { opacity: 0; } to { opacity: 1; } }
 @keyframes cheerpop { from { transform: scale(.6); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes cheerthumb { from { transform: rotate(-35deg) scale(.4); } to { transform: none; } }
 @keyframes cheerfade { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
@@ -157,10 +158,10 @@ h1, h2, h3 { font-family: var(--f-display); letter-spacing: .01em; line-height: 
 .planbox img { display: block; width: 100%; max-width: none; height: auto; background: #fff; border-radius: 6px; box-shadow: var(--shadow); user-select: none; -webkit-user-drag: none; }
 .planbox svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .planbox svg.editing { touch-action: none; cursor: crosshair; }
-.room rect { fill: color-mix(in srgb, var(--accent) 22%, transparent); stroke: var(--accent); stroke-width: 0.25%; vector-effect: non-scaling-stroke; cursor: pointer; }
-.room.has rect { fill: color-mix(in srgb, var(--open) 18%, transparent); stroke: var(--open); }
-.room.sel rect { stroke-width: 4px; fill: color-mix(in srgb, var(--focus) 25%, transparent); stroke: var(--focus); }
-.room text { fill: #16212c; font-family: var(--f-display); font-weight: 700; text-anchor: middle; dominant-baseline: central; pointer-events: none; paint-order: stroke; stroke: rgba(255,255,255,.85); stroke-width: 3px; }
+.room .shape { fill: color-mix(in srgb, var(--accent) 16%, transparent); stroke: #c98f00; stroke-width: 1.25px; vector-effect: non-scaling-stroke; cursor: pointer; }
+.room.has .shape { fill: color-mix(in srgb, var(--open) 16%, transparent); stroke: var(--open); }
+.room.sel .shape { stroke-width: 2.5px; fill: color-mix(in srgb, var(--focus) 22%, transparent); stroke: var(--focus); }
+.room text { fill: #16212c; font-family: var(--f-display); font-weight: 600; text-anchor: middle; dominant-baseline: central; pointer-events: none; paint-order: stroke; stroke: rgba(255,255,255,.9); stroke-width: 2px; vector-effect: non-scaling-stroke; }
 .room circle { fill: var(--open); }
 .room text.n { fill: #fff; stroke: none; font-family: var(--f-body); }
 .draft { fill: color-mix(in srgb, var(--focus) 20%, transparent); stroke: var(--focus); stroke-width: 3px; vector-effect: non-scaling-stroke; stroke-dasharray: 6 4; }
@@ -962,7 +963,7 @@ const DESC_SYSTEM = `You tidy a site snag description that was dictated on a pho
 Rewrite the note so it reads clearly:
 - Keep every fact the speaker gave and add nothing: no new causes, sizes, locations, actions or people.
 - Put it in a sensible order: what is wrong and exactly where on the element first, then any extra detail, then what needs doing if the speaker said it.
-- Fix speech-to-text mistakes and mis-heard trade terms, remove filler words, false starts and repetition.
+- Fix speech-to-text mistakes, especially trade words the phone mis-hears, using the context of drylining, decoration and finishes snags. For example "miss coat" or "miss coating" is "mist coat", "taping and joining" is "taping and jointing", "window seal" is "window sill", "plaster bored" is "plasterboard", "scree" is "screed", "d p m" is "DPM", "white emotion" is "white emulsion". Remove filler words, false starts and repetition.
 - UK English, plain and concise, one to three short sentences, as written on a snag list. Do not repeat the room or location name, which is recorded separately.`;
 const DESC_SCHEMA = { type: 'object', properties: { description: { type: 'string' } }, required: ['description'], additionalProperties: false };
 async function claudeDesc(text, where) {
@@ -993,9 +994,31 @@ async function claudeDesc(text, where) {
     return t ? String(JSON.parse(t.text).description || '').trim() || null : null;
   } finally { clearTimeout(timer); }
 }
-// on-phone fallback: spoken punctuation, filler words, repeats, capitals and full stops
+// words the phone often mishears on site, fixed by Tidy up
+const MISHEARD = [
+  [/\b(miss|mis|mist)[\s-]*(coat(?:s|ing|ed)?|code)\b/gi, (m, a, b) => 'mist ' + (/^code$/i.test(b) ? 'coat' : b.toLowerCase())],
+  [/\btaping and joining\b/gi, 'taping and jointing'], 
+  [/\bjoining compound\b/gi, 'jointing compound'],
+  [/\bplaster[\s-]?(bored|boards?)\b/gi, (m, b) => 'plasterboard' + (/s$/i.test(b) ? 's' : '')],
+  [/\bskirting[\s-]?(bored|bore)\b/gi, 'skirting board'],
+  [/\bwindow (seals?|seels?|cills?|sils?)\b/gi, (m, b) => 'window sill' + (/s$/i.test(b) ? 's' : '')],
+  [/\b(d\.? ?p\.? ?m\.?|dee pee em|deep m)\b/gi, 'DPM'],
+  [/\b(scream|screen|scrim(med)?) tape\b/gi, 'scrim tape'],
+  [/\b(scree|scream)\b(?! (?:test|shot))/gi, 'screed'],
+  [/\b(archie|arch a|arc a|archi) ?trave(s?)\b/gi, (m, a, s2) => 'architrave' + s2],
+  [/\bdry[\s-]lining\b/gi, 'drylining'], [/\bdry[\s-]liner\b/gi, 'dryliner'],
+  [/\b(white|magnolia|matt|vinyl|silk|coat of) emotion\b/gi, (m, a) => a + ' emulsion'],
+  [/\bunder[\s-]coat\b/gi, 'undercoat'], [/\bbulk[\s-]head\b/gi, 'bulkhead'],
+  [/\b(sofa it|soft it|soffits?)\b/gi, m => /s$/i.test(m) ? 'soffits' : 'soffit'],
+  [/\bcorner (beating|beeding|bead in)\b/gi, 'corner bead'], [/\bangle (beating|beeding)\b/gi, 'angle bead'],
+  [/\bsilicon\b/gi, 'silicone'], [/\bdecorators? cork\b/gi, "decorator's caulk"], [/\bcork(ed|ing)? (the|to|around)\b/gi, (m, a, b) => 'caulk' + (a || '') + ' ' + b],
+
+  [/\bfinal (decorations?|deck)\b/gi, 'final decoration'], [/\bsecond fixed\b/gi, 'second fix'], [/\bfirst fixed\b/gi, 'first fix'],
+];
+const fixMisheard = t => MISHEARD.reduce((s2, [re, to]) => s2.replace(re, to), t);
+// on-phone fallback: misheard trade words, spoken punctuation, filler words, repeats, capitals and full stops
 function localDesc(text) {
-  let t = ' ' + text + ' ';
+  let t = ' ' + fixMisheard(text) + ' ';
   t = t.replace(/\b(full stop|period)\b/gi, '.').replace(/\bcomma\b/gi, ',').replace(/\bnew (line|paragraph)\b/gi, '.');
   t = t.replace(/\b(um+|uh+|er+m?|you know|i mean|basically|sort of|kind of|like I said|okay so|right so)\b[,]?/gi, ' ');
   t = t.replace(/^\s*(so|and|right|ok|okay|yeah)\b[,]?\s*/i, ' ');
@@ -1014,7 +1037,7 @@ async function tidyDescription() {
   const btn = $('#tidyBtn'); const old = btn.innerHTML; btn.disabled = true; btn.textContent = 'Tidying…';
   let out = null, how = 'phone';
   try { out = await claudeDesc(text, cur.location); if (out) how = 'claude'; } catch (e) { toast((e?.message || 'Claude could not tidy this one.') + ' Tidied on the phone instead.'); }
-  if (!out) out = localDesc(text) || text;
+  if (out) out = fixMisheard(out); else out = localDesc(text) || text;
   btn.disabled = false; btn.innerHTML = old;
   if (!cur) return;
   const before = text;
@@ -1253,7 +1276,7 @@ $('#zoomOut').onclick = () => { zoom = Math.max(1, zoom / 1.5); applyZoom(); };
 $('#editRoomsBtn').onclick = () => { editing = !editing; hideRoomPanel(); renderPlan(); };
 function renderPlan() {
   if (!plan) return;
-  const svg = $('#planSvg'); const fs = Math.max(plan.w, plan.h) / 24;
+  const svg = $('#planSvg'); const fs = Math.max(plan.w, plan.h) / 48;
   svg.classList.toggle('editing', editing);
   $('#editRoomsBtn').textContent = editing ? 'Finish' : 'Edit rooms';
   $('#editRoomsBtn').classList.toggle('on', editing);
@@ -1264,8 +1287,8 @@ function renderPlan() {
   svg.innerHTML = plan.rooms.map(r => {
     const n = openCount(plan.id, r.id);
     return `<g class="room${n ? ' has' : ''}${panelRoom === r.id ? ' sel' : ''}" data-rid="${r.id}">
-      <rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" rx="${fs / 4}"></rect>
-      <text x="${r.x + r.w / 2}" y="${r.y + r.h / 2}" font-size="${Math.min(fs, r.h / 2.2, r.w / Math.max(3, r.name.length * 0.62))}">${esc(r.name)}</text>
+      ${r.pts ? `<polygon class="shape" points="${r.pts}"></polygon>` : `<rect class="shape" x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}"></rect>`}
+      <text x="${r.lx ?? r.x + r.w / 2}" y="${r.ly ?? r.y + r.h / 2}" font-size="${Math.min(fs, r.h / 2.2, r.w / Math.max(3, r.name.length * 0.62))}">${esc(r.name)}</text>
       ${n ? `<circle cx="${r.x + r.w - fs * 0.5}" cy="${r.y + fs * 0.5}" r="${fs * 0.42}"></circle><text class="n" x="${r.x + r.w - fs * 0.5}" y="${r.y + fs * 0.5}" font-size="${fs * 0.5}">${n}</text>` : ''}
     </g>`;
   }).join('') + (draft ? `<rect class="draft" x="${Math.min(draft.x0, draft.x1)}" y="${Math.min(draft.y0, draft.y1)}" width="${Math.abs(draft.x1 - draft.x0)}" height="${Math.abs(draft.y1 - draft.y0)}"></rect>` : '');
@@ -1383,7 +1406,20 @@ async function unlockLayouts(code) {
   try { plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: buf.slice(20, 32) }, key, buf.slice(32)); }
   catch { throw new Error('That passcode is not right. Check it and try again.'); }
   const text = await new Response(new Blob([plain]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
-  const n = await restorePlans(JSON.parse(text).plans);
+  const incoming = JSON.parse(text).plans || [];
+  // replace any earlier copy of these layouts, keeping snags linked to their rooms
+  const byName = new Map(incoming.map(p => [p.name, p])), byIdIn = new Map(incoming.map(p => [p.id, p]));
+  for (const old of plans.filter(p => byIdIn.has(p.id) || byName.has(p.name))) {
+    const np = byIdIn.get(old.id) || byName.get(old.name);
+    for (const r of records.filter(r => r.planId === old.id)) {
+      const room = old.rooms.find(x => x.id === r.roomId), nr = room && np.rooms.find(x => x.id === room.id || x.name === room.name);
+      r.planId = np.id; if (nr) r.roomId = nr.id; else { delete r.roomId; if (room) r.roomName = room.name; }
+      await db.put(r);
+    }
+    await planDb.del(old.id); planURLs.delete(old.id); plans = plans.filter(p => p !== old);
+    if (plan && plan.id === old.id) plan = null;
+  }
+  const n = await restorePlans(incoming);
   refreshPlanViews();
   return n;
 }
@@ -1434,8 +1470,11 @@ async function planFigure(p, items) {
     const refs = items.filter(it => it.planId === p.id && it.roomId === room.id).map(it => refStr(it.ref));
     if (!refs.length) continue;
     const x = room.x * k, y = room.y * k, w = room.w * k, h = room.h * k;
-    g.fillStyle = 'rgba(217,45,32,0.12)'; g.fillRect(x, y, w, h);
-    g.strokeStyle = '#d92d20'; g.lineWidth = Math.max(2, fs / 6); g.strokeRect(x, y, w, h);
+    g.beginPath();
+    if (room.pts) room.pts.split(' ').forEach((q, i) => { const [qx, qy] = q.split(',').map(Number); g[i ? 'lineTo' : 'moveTo'](qx * k, qy * k); });
+    else g.rect(x, y, w, h);
+    g.closePath(); g.fillStyle = 'rgba(217,45,32,0.12)'; g.fill();
+    g.strokeStyle = '#d92d20'; g.lineWidth = Math.max(2, fs / 8); g.stroke();
     g.font = `600 ${fs}px Arial, sans-serif`; g.textBaseline = 'top';
     const label = room.name + ': ' + refs.join(', '); const tw = g.measureText(label).width;
     g.fillStyle = '#d92d20'; g.fillRect(x, y, Math.min(tw + fs * 0.6, Math.max(w, tw + fs * 0.6)), fs * 1.4);
