@@ -259,7 +259,7 @@ h1, h2, h3 { font-family: var(--f-display); letter-spacing: .01em; line-height: 
     </div>
     <div class="menu" id="menu" hidden>
       <button type="button" id="backupBtn">Back up all snags (.json)</button>
-      <label for="restoreInput">Restore from a backup…</label>
+      <label for="restoreInput">Load a backup or layouts file…</label>
       <button type="button" id="settingsBtn">Settings</button>
       <button type="button" id="examplesBtn">Load example snags</button>
     </div>
@@ -318,7 +318,7 @@ h1, h2, h3 { font-family: var(--f-display); letter-spacing: .01em; line-height: 
 
       <div class="field">
         <label for="f-raw">Describe the snag</label>
-        <div class="inputwrap dict"><textarea id="f-raw" data-k="raw" rows="5" placeholder="Just say it in one go, e.g. &#8220;Tipping hall, east elevation, gridline C4 to C6 at level 2. Composite wall panel dented, about 300 mm, looks like plant impact. Panel needs replacing. Cladding contractor.&#8221;"></textarea></div>
+        <div class="inputwrap dict"><textarea id="f-raw" data-k="raw" rows="5"></textarea></div>
         <div class="speakrow">
           <button class="btn speak" id="speakBtn" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>Speak</button>
           <button class="btn dark" id="tidyBtn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg>Tidy into record</button>
@@ -410,13 +410,16 @@ h1, h2, h3 { font-family: var(--f-display); letter-spacing: .01em; line-height: 
     <header class="top">
       <div class="wrap">
         <button class="iconbtn" id="plansBack" type="button" aria-label="Back to snags"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
-        <h1><span>Building layouts</span></h1>
+        <h1><span id="plansTitle">Building layouts</span></h1>
       </div>
     </header>
     <div class="wrap form">
+      <p class="settings-note" id="pickNote" hidden>Choose the layout, then tap the room where the snag is.</p>
       <div class="list" id="planList" style="padding-block:0"></div>
+      <button class="btn ghost block" type="button" id="pickSkip" hidden>Continue without a room</button>
       <label class="btn primary block" for="planInput"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Add a layout (PDF or image)</label>
       <input type="file" id="planInput" accept="image/*,application/pdf,.pdf" multiple class="visually-hidden">
+      <label class="btn ghost block" for="restoreInput">Load a layouts file (.json)</label>
     </div>
   </section>
   <section class="sheet" id="planView" hidden aria-label="Layout">
@@ -585,7 +588,7 @@ $('#selAllBtn').onclick = () => {
   if (vis.every(r => selected.has(r.id))) vis.forEach(r => selected.delete(r.id)); else vis.forEach(r => selected.add(r.id));
   updateSelBar(); renderList();
 };
-$('#newBtn').onclick = () => openEditor(null);
+$('#newBtn').onclick = () => plans.length ? startPick() : openEditor(null);
 
 /* menu */
 $('#menuBtn').onclick = e => { e.stopPropagation(); $('#menu').hidden = !$('#menu').hidden; };
@@ -1100,11 +1103,26 @@ function renderPlans() {
 }
 $('#planList').addEventListener('click', e => { const c = e.target.closest('[data-pid]'); if (c) openPlan(c.dataset.pid); });
 $('#planInput').addEventListener('change', e => { const f = [...e.target.files]; e.target.value = ''; addPlanFiles(f); });
+let picking = false, pendingOpen = null;
+function startPick() {
+  picking = true; openPlans();
+  if (plans.length === 1) openPlan(plans[0].id);
+}
+function finishPick(ctx) {
+  picking = false;
+  const depth = (!$('#planView').hidden ? 1 : 0) + (!$('#plans').hidden ? 1 : 0);
+  pendingOpen = { ctx };
+  if (depth && ['#plans', '#plan'].includes(location.hash)) history.go(-depth);
+  else { $('#planView').hidden = true; $('#plans').hidden = true; const c = pendingOpen.ctx; pendingOpen = null; openEditor(null, c); }
+}
+$('#pickSkip').onclick = () => finishPick(null);
 function openPlans() {
+  $('#plansTitle').textContent = picking ? 'Where is the snag?' : 'Building layouts';
+  $('#pickNote').hidden = !picking; $('#pickSkip').hidden = !picking;
   renderPlans(); $('#plans').hidden = false; document.body.style.overflow = 'hidden';
   if (location.hash !== '#plans') history.pushState(null, '', '#plans');
 }
-function closePlans() { $('#plans').hidden = true; document.body.style.overflow = ''; if (location.hash === '#plans') history.back(); }
+function closePlans() { picking = false; $('#plans').hidden = true; document.body.style.overflow = ''; if (location.hash === '#plans') history.back(); }
 $('#plansBtn').onclick = openPlans;
 $('#plansBack').onclick = closePlans;
 
@@ -1132,7 +1150,8 @@ function renderPlan() {
   svg.classList.toggle('editing', editing);
   $('#editRoomsBtn').textContent = editing ? 'Finish' : 'Edit rooms';
   $('#editRoomsBtn').classList.toggle('on', editing);
-  $('#planHint').textContent = editing
+  $('#editRoomsBtn').hidden = picking && !editing && plan.rooms.length > 0;
+  $('#planHint').textContent = picking && !editing ? (plan.rooms.length ? 'Tap the room where the snag is.' : 'No rooms marked on this layout yet. Tap Edit rooms to mark them.') : editing
     ? 'Drag a box over each room to mark it. Tap a marked room to rename or remove it.'
     : plan.rooms.length ? 'Tap a room to see its snags or record a new one.' : 'No rooms marked yet. Tap Edit rooms to mark them.';
   svg.innerHTML = plan.rooms.map(r => {
@@ -1168,6 +1187,7 @@ svg.addEventListener('click', e => {
   const g = e.target.closest('.room'); if (!g || !plan) return;
   const room = plan.rooms.find(r => r.id === g.dataset.rid); if (!room) return;
   panelRoom = room.id; renderPlan();
+  if (picking && !editing) { finishPick({ planId: plan.id, roomId: room.id }); return; }
   editing ? showRoomEditor(room, false) : showRoomSnags(room);
 });
 function hideRoomPanel() { $('#roomPanel').hidden = true; panelRoom = null; if (plan) renderPlan(); }
@@ -1469,6 +1489,7 @@ async function backup() {
   await offerFile(new Blob([json], { type: 'application/json' }), 'Top Snagger backup ' + todayISO() + '.json');
 }
 async function restore(file) {
+  toast('Loading ' + file.name + '…');
   try {
     const data = JSON.parse(await file.text());
     if (data.app !== 'snag-recorder' || !Array.isArray(data.records)) throw 0;
@@ -1481,7 +1502,7 @@ async function restore(file) {
     const np = await restorePlans(data.plans);
     const next = Math.max(await db.get('nextRef', 1), data.nextRef || 1, ...records.map(r => r.ref + 1));
     await db.set('nextRef', next);
-    renderList(); toast(added || np ? `Restored ${added} snag${added === 1 ? '' : 's'}${np ? ` and ${np} layout${np === 1 ? '' : 's'}` : ''}` : 'Those snags are already on this device.');
+    renderList(); refreshPlanViews(); toast(added || np ? `Restored ${added} snag${added === 1 ? '' : 's'}${np ? ` and ${np} layout${np === 1 ? '' : 's'}` : ''}` : 'Those snags are already on this device.');
   } catch { toast('That file is not a Top Snagger backup.'); }
 }
 
@@ -1525,7 +1546,8 @@ window.addEventListener('popstate', () => {
   if (!$('#report').hidden && location.hash !== '#report') { $('#report').hidden = true; document.body.style.overflow = ''; }
   if (!$('#settings').hidden && location.hash !== '#setup') { $('#settings').hidden = true; document.body.style.overflow = ''; }
   if (!$('#planView').hidden && !['#plan', '#snag'].includes(location.hash)) { $('#planView').hidden = true; plan = null; renderPlans(); }
-  if (!$('#plans').hidden && !['#plans', '#plan', '#snag'].includes(location.hash)) { $('#plans').hidden = true; document.body.style.overflow = ''; }
+  if (!$('#plans').hidden && !['#plans', '#plan', '#snag'].includes(location.hash)) { $('#plans').hidden = true; document.body.style.overflow = ''; if (!pendingOpen) picking = false; }
+  if (pendingOpen && !['#plans', '#plan'].includes(location.hash)) { const c = pendingOpen.ctx; pendingOpen = null; picking = false; openEditor(null, c); }
 });
 document.addEventListener('visibilitychange', () => { if (document.hidden && cur) { stopVoice(); saveCurrent(); } });
 
