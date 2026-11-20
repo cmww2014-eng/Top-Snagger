@@ -273,6 +273,7 @@ h1, h2, h3 { font-family: var(--f-display); letter-spacing: .01em; line-height: 
       <button class="iconbtn" id="menuBtn" type="button" aria-label="More options" aria-haspopup="true"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
     </div>
     <div class="menu" id="menu" hidden>
+      <button type="button" id="unlockBtn">Load project layouts (passcode)</button>
       <button type="button" id="xlsxAllBtn">Download all snags (Excel)</button>
       <button type="button" id="backupBtn">Back up all snags (.json)</button>
       <label for="restoreInput">Load a backup or layouts file…</label>
@@ -429,6 +430,7 @@ h1, h2, h3 { font-family: var(--f-display); letter-spacing: .01em; line-height: 
         <button type="button" id="hmSnags">Logged snags</button>
         <button type="button" id="hmReport">Create a report</button>
         <button type="button" id="hmXlsx">Download snag log (Excel)</button>
+        <button type="button" id="hmUnlock">Load project layouts (passcode)</button>
         <button type="button" id="hmLayouts">Add or manage layouts</button>
         <button type="button" id="hmBackup">Back up all snags (.json)</button>
         <label for="restoreInput">Load a backup or layouts file…</label>
@@ -440,6 +442,18 @@ h1, h2, h3 { font-family: var(--f-display); letter-spacing: .01em; line-height: 
       <span class="zoom"><button type="button" id="zoomOut" aria-label="Zoom out">−</button><span id="zoomLbl" class="num">100%</span><button type="button" id="zoomIn" aria-label="Zoom in">+</button></span></div>
     <div class="planscroll"><div class="planbox" id="planBox"><img id="planImg" alt="Building layout"><svg id="planSvg" xmlns="http://www.w3.org/2000/svg"></svg></div></div>
     <div class="roompanel" id="roomPanel" hidden></div>
+  </section>
+
+  <!-- passcode for the project layouts -->
+  <section class="sheet" id="unlock" hidden aria-label="Project layouts" style="z-index:48">
+    <header class="top"><div class="wrap"><h1><span>Project layouts</span></h1></div></header>
+    <div class="wrap form">
+      <p>Enter the passcode you were sent to load the building layouts onto this phone. You only need to do this once.</p>
+      <div class="field"><label for="unlockCode">Passcode</label><input type="text" id="unlockCode" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="word-word-word-word-00"></div>
+      <button class="btn primary block" type="button" id="unlockGo">Load layouts</button>
+      <p class="settings-note" id="unlockMsg" aria-live="polite"></p>
+      <button class="btn ghost block" type="button" id="unlockSkip">Not now</button>
+    </div>
   </section>
 
   <!-- settings -->
@@ -1350,6 +1364,41 @@ $('#hmXlsx').onclick = () => { $('#homeMenu').hidden = true; $('#xlsxAllBtn').cl
 $('#hmLayouts').onclick = () => { $('#homeMenu').hidden = true; openPlans(); };
 $('#hmBackup').onclick = () => { $('#homeMenu').hidden = true; backup(); };
 $('#hmSettings').onclick = () => { $('#homeMenu').hidden = true; openSettings(); };
+/* --- project layouts, encrypted with a passcode (layouts.bin next to the app) --- */
+async function unlockLayouts(code) {
+  const res = await fetch('layouts.bin', { cache: 'no-cache' });
+  if (!res.ok) throw new Error('Could not download the layouts. Check your signal and try again.');
+  const buf = new Uint8Array(await res.arrayBuffer());
+  if (String.fromCharCode(...buf.slice(0, 4)) !== 'TSL1') throw new Error('The layouts file is damaged. Try again later.');
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(code), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt: buf.slice(4, 20), iterations: 600000, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+  let plain;
+  try { plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: buf.slice(20, 32) }, key, buf.slice(32)); }
+  catch { throw new Error('That passcode is not right. Check it and try again.'); }
+  const text = await new Response(new Blob([plain]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
+  const n = await restorePlans(JSON.parse(text).plans);
+  refreshPlanViews();
+  return n;
+}
+function openUnlock() {
+  $('#menu').hidden = true; $('#homeMenu').hidden = true;
+  $('#unlockMsg').textContent = ''; $('#unlock').hidden = false; document.body.style.overflow = 'hidden';
+}
+function closeUnlock() { $('#unlock').hidden = true; document.body.style.overflow = homeMode && !$('#planView').hidden ? 'hidden' : ''; }
+$('#unlockBtn').onclick = openUnlock; $('#hmUnlock').onclick = openUnlock;
+$('#unlockSkip').onclick = closeUnlock;
+$('#unlockCode').onkeydown = e => { if (e.key === 'Enter') $('#unlockGo').click(); };
+$('#unlockGo').onclick = async () => {
+  const code = $('#unlockCode').value.trim().toLowerCase().replace(/\s+/g, '-');
+  if (!code) { $('#unlockMsg').textContent = 'Type the passcode first.'; return; }
+  const btn = $('#unlockGo'); btn.disabled = true; btn.textContent = 'Loading layouts…'; $('#unlockMsg').textContent = 'This can take a minute on site signal.';
+  try {
+    const n = await unlockLayouts(code);
+    closeUnlock(); $('#unlockCode').value = '';
+    toast(n ? `Loaded ${n} layouts.` : 'The layouts are already on this phone.');
+  } catch (e) { $('#unlockMsg').textContent = e?.message || 'Could not load the layouts.'; }
+  finally { btn.disabled = false; btn.textContent = 'Load layouts'; }
+};
 function refreshPlanViews() {
   if (homeMode) { if (!plans.length) exitHome(); else { fillFloors(); if (!plan || !planById(plan.id)) setFloor(defaultFloor()); else renderPlan(); } }
   else if (plans.length) enterHome();
@@ -1806,6 +1855,8 @@ async function start() {
   renderList();
   if (['#snag', '#report', '#setup', '#plans', '#plan', '#list'].includes(location.hash)) history.replaceState(null, '', location.pathname + location.search);
   if (plans.length) await enterHome();
+  if (inViewer()) { $('#unlockBtn').hidden = true; $('#hmUnlock').hidden = true; }
+  else if (!plans.length) openUnlock();
   if (!inViewer()) {
     try { if (navigator.canShare && navigator.canShare({ files: [new File(['x'], 'x.docx', { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' })] })) $('#shareBtn').hidden = false; } catch {}
     if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
