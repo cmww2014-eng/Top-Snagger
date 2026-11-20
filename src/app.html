@@ -56,6 +56,7 @@ h1, h2, h3 { font-family: var(--f-display); letter-spacing: .01em; line-height: 
 .top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--ink); color: var(--bg); }
 .top .wrap { display: flex; align-items: center; gap: 10px; padding-block: 10px; min-height: 56px; }
 .top h1 { font-size: 24px; flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; }
+@media (max-width: 440px) { .top h1 { font-size: 21px; white-space: nowrap; } .top .textbtn { padding: 6px 11px; font-size: 14px; } }
 .top h1 .mark { width: 26px; height: 26px; border-radius: 6px; background: var(--accent); display: grid; place-items: center; flex: none; }
 .top h1 .mark svg { width: 16px; height: 16px; }
 .top .sub { font: 500 13px var(--f-body); opacity: .7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -117,6 +118,15 @@ h1, h2, h3 { font-family: var(--f-display); letter-spacing: .01em; line-height: 
 
 /* sheets */
 #editor { z-index: 45; }
+.cheer { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; background: color-mix(in srgb, var(--ink) 55%, transparent); animation: cheerfade 1.9s ease forwards; }
+.cheer .card2 { max-width: calc(100% - 48px); background: var(--accent); color: var(--accent-ink); border-radius: 28px; padding: 28px 36px 24px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,.35); animation: cheerpop .45s cubic-bezier(.2,1.6,.4,1) both; }
+.cheer .thumb { font-size: 112px; line-height: 1; display: block; animation: cheerthumb .6s .15s cubic-bezier(.2,1.8,.4,1) both; }
+.cheer .word { font: 700 44px/1 var(--f-display); letter-spacing: .06em; display: block; margin-top: 10px; }
+.cheer .sub { font-weight: 600; font-size: 16px; opacity: .8; display: block; margin-top: 8px; }
+@keyframes cheerpop { from { transform: scale(.6); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes cheerthumb { from { transform: rotate(-35deg) scale(.4); } to { transform: none; } }
+@keyframes cheerfade { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .cheer, .cheer .card2, .cheer .thumb { animation: none; } }
 /* plans */
 .plancard .thumb img { object-fit: contain; background: #fff; }
 .planbar { display: flex; align-items: center; gap: 8px; padding-block: 10px; flex-wrap: wrap; }
@@ -652,7 +662,17 @@ async function closeEditor(fromDelete) {
   renderList(); refreshPlanViews();
   if (location.hash === '#snag') history.back();
 }
-$('#edDone').onclick = async () => { await autoTidy(); closeEditor(false); };
+function cheer(ref) {
+  const c = document.createElement('div'); c.className = 'cheer'; c.setAttribute('role', 'status');
+  c.innerHTML = `<div class="card2"><span class="thumb" aria-hidden="true">👍</span><span class="word">TOP SNAGGER</span><span class="sub">${ref ? refStr(ref) + ' saved' : 'Saved'}</span></div>`;
+  const done = () => c.remove(); c.onclick = done; document.body.append(c); setTimeout(done, 1900);
+}
+$('#edDone').onclick = async () => {
+  await autoTidy(); if (cur) await saveCurrent();
+  const id = cur && cur.id; const saved = id && byId(id);
+  await closeEditor(false);
+  if (saved) cheer(saved.ref);
+};
 $('#edBack').onclick = () => closeEditor(false);
 
 /* photos */
