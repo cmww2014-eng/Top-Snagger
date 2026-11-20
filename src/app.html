@@ -172,7 +172,7 @@ h1, h2, h3 { font-family: var(--f-display); letter-spacing: .01em; line-height: 
 .form input[type="text"], .form input[type="password"], .form input[type="date"], .form textarea {
   width: 100%; border: 1.5px solid var(--line); background: var(--surface); border-radius: 12px; padding: 12px 14px; font-size: 17px; line-height: 1.4; }
 .form textarea { min-height: 84px; resize: vertical; }
-.speakrow { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.speakrow { display: grid; grid-template-columns: 1fr; gap: 8px; }
 .btn.speak { background: var(--accent); color: var(--accent-ink); font-size: 18px; min-height: 56px; }
 .btn.speak.live { background: var(--rec); color: #fff; animation: pulse 1.2s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .btn.speak.live { animation: none; } }
@@ -309,6 +309,10 @@ h1, h2, h3 { font-family: var(--f-display); letter-spacing: .01em; line-height: 
       </div>
     </header>
     <div class="wrap form">
+      <div class="field">
+        <label for="f-location">Location</label>
+        <textarea id="f-location" data-k="location" rows="2" placeholder="Fills in from the room you pick on the layout"></textarea>
+      </div>
       <div class="roomchip" id="edRoom" hidden><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.3-7-12a7 7 0 0 1 14 0c0 5.7-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/></svg><span id="edRoomName"></span><button type="button" id="edRoomClear">Remove</button></div>
       <div class="field">
         <span class="label">Photos</span>
@@ -328,54 +332,20 @@ h1, h2, h3 { font-family: var(--f-display); letter-spacing: .01em; line-height: 
 
       <div class="field">
         <label for="f-raw">Describe the snag</label>
-        <div class="inputwrap dict"><textarea id="f-raw" data-k="raw" rows="5"></textarea></div>
+        <div class="inputwrap dict"><textarea id="f-raw" data-k="description" rows="5"></textarea></div>
         <div class="speakrow">
           <button class="btn speak" id="speakBtn" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>Speak</button>
-          <button class="btn dark" id="tidyBtn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg>Tidy into record</button>
         </div>
         <div class="hint" id="voiceHint" hidden></div>
-        <span class="tidynote" id="tidyNote"></span>
       </div>
 
-      <section class="record" id="recordCard" aria-label="Record">
-        <h2 class="section-title">Record <small>check and edit if needed</small></h2>
-        <div class="seg" id="edCat" role="group" aria-label="Type">
-          <button type="button" data-v="defect">Defect</button>
-          <button type="button" data-v="incomplete">Not complete</button>
-          <button type="button" data-v="damage">Damage</button>
+      <div class="field">
+        <span class="label">Status</span>
+        <div class="seg two" id="edStatus" role="group" aria-label="Status">
+          <button type="button" data-v="open">Open</button>
+          <button type="button" data-v="closed">Closed</button>
         </div>
-        <div class="field">
-          <label for="f-location">Location</label>
-          <textarea id="f-location" data-k="location" rows="2" placeholder="Building, elevation, gridline, level"></textarea>
-        </div>
-        <div class="field">
-          <label for="f-element">Element</label>
-          <input type="text" id="f-element" data-k="element" placeholder="e.g. Composite wall panel, flashing, louvre" autocomplete="off">
-        </div>
-        <div class="field">
-          <label for="f-description">Issue</label>
-          <textarea id="f-description" data-k="description" rows="3" placeholder="What is wrong?"></textarea>
-        </div>
-        <div class="field">
-          <label for="f-action">Action required</label>
-          <textarea id="f-action" data-k="action" rows="2" placeholder="What needs to be done?"></textarea>
-        </div>
-        <div class="field">
-          <label for="f-trade">Responsible</label>
-          <input type="text" id="f-trade" data-k="trade" placeholder="e.g. Cladding contractor" autocomplete="off">
-        </div>
-        <div class="field">
-          <label for="f-site">Project</label>
-          <input type="text" id="f-site" data-k="site" autocomplete="off">
-        </div>
-        <div class="field">
-          <span class="label">Status</span>
-          <div class="seg two" id="edStatus" role="group" aria-label="Status">
-            <button type="button" data-v="open">Open</button>
-            <button type="button" data-v="closed">Closed</button>
-          </div>
-        </div>
-      </section>
+      </div>
       <div id="delWrap"></div>
     </div>
     <div class="bar">
@@ -459,7 +429,7 @@ h1, h2, h3 { font-family: var(--f-display); letter-spacing: .01em; line-height: 
     <div class="wrap form">
       <div class="field"><label for="s-project">Project</label><input type="text" id="s-project" data-s="project" placeholder="e.g. Energy from Waste facility, cladding package"><p class="settings-note">Used on new snags and in reports.</p></div>
       <div class="field"><label for="s-by">Your name</label><input type="text" id="s-by" data-s="preparedBy" placeholder="Shown as Prepared by on reports"></div>
-      <div class="field" id="keyField"><label for="s-key">Claude API key (optional)</label><input type="password" id="s-key" data-s="apiKey" autocomplete="off" placeholder="sk-ant-..."><p class="settings-note">With a key, Claude tidies your dictation when you have signal. Without one, or with no signal, the app tidies it on the phone using built-in rules. The key stays on this phone.</p></div>
+      <div class="field" id="keyField" hidden><label for="s-key">Claude API key (optional)</label><input type="password" id="s-key" data-s="apiKey" autocomplete="off" placeholder="sk-ant-..."><p class="settings-note">With a key, Claude tidies your dictation when you have signal. Without one, or with no signal, the app tidies it on the phone using built-in rules. The key stays on this phone.</p></div>
     </div>
   </section>
 
@@ -566,10 +536,10 @@ function renderList() {
         ${r.photos.length > 1 ? `<span class="count num">${r.photos.length}</span>` : ''}
         ${selectMode ? `<span class="tick">${ICON.tick}</span>` : ''}</span>
       <span class="body">
-        <span class="row1"><span class="ref num">${refStr(r.ref)}</span><span class="pill ${r.category}">${CAT[r.category]}</span><span class="pill ${r.status}">${STATUS[r.status]}</span>${r.work ? `<span class="pill room">${esc(r.work)}</span>` : ''}${r.example ? '<span class="pill example">Example</span>' : ''}</span>
+        <span class="row1"><span class="ref num">${refStr(r.ref)}</span><span class="pill ${r.status}">${STATUS[r.status]}</span>${r.work ? `<span class="pill room">${esc(r.work)}</span>` : ''}${r.example ? '<span class="pill example">Example</span>' : ''}</span>
         <span class="loc">${esc(r.location) || (r.raw ? esc(r.raw.slice(0, 60)) : '<i style="opacity:.6">No details yet</i>')}</span>
-        ${r.description || r.element ? `<span class="desc">${r.element ? '<b>' + esc(r.element) + '.</b> ' : ''}${esc(r.description)}</span>` : ''}
-        <span class="meta">${fmtDateTime(r.createdAt)}${r.trade ? ' · ' + esc(r.trade) : ''}</span>
+        ${r.description ? `<span class="desc">${esc(r.description)}</span>` : ''}
+        <span class="meta">${fmtDateTime(r.createdAt)}</span>
       </span></button>`;
   }).join('');
 }
@@ -619,6 +589,7 @@ async function openEditor(r, ctx) {
   if (r) cur = structuredClone ? { ...r, photos: [...r.photos] } : r;
   else cur = { id: uid(), ref: 0, createdAt: Date.now(), updatedAt: Date.now(), site: settings.project || (await db.get('lastSite', '')), raw: '', element: '', location: '', description: '', action: '', trade: '', tidiedRaw: '', category: 'defect', status: 'open', photos: [], work: '' };
   if (!r && ctx) { Object.assign(cur, ctx); cur.location = roomLabel(cur); }
+  if (!cur.description && cur.raw) cur.description = cur.raw;
   $('#edTitle').textContent = r ? refStr(r.ref) : 'New snag';
   $('#edSaved').textContent = r ? 'Saved' : '';
   fillEditor(); setTidyNote();
@@ -647,7 +618,6 @@ async function deleteCurrent() {
   await db.del(cur.id); records = records.filter(r => r.id !== cur.id); selected.delete(cur.id);
   toast(refStr(cur.ref) + ' deleted'); cur = null; closeEditor(true);
 }
-$('#edCat').onclick = e => { const b = e.target.closest('button'); if (!b) return; cur.category = b.dataset.v; setSeg('#edCat', cur.category); queueSave(); };
 $('#edStatus').onclick = e => { const b = e.target.closest('button'); if (!b) return; cur.status = b.dataset.v; setSeg('#edStatus', cur.status); queueSave(); };
 $$('#editor [data-k]').forEach(el => el.addEventListener('input', () => { cur[el.dataset.k] = el.value; queueSave(); if (el.dataset.k === 'raw') setTidyNote(); }));
 function queueSave() { $('#edSaved').textContent = 'Saving…'; clearTimeout(saveT); saveT = setTimeout(saveCurrent, 400); }
@@ -992,22 +962,19 @@ async function tidyCurrent() {
   if (err) toast(err + ' Tidied on the phone instead.');
   await saveCurrent();
 }
-async function autoTidy() {
-  if (cur && cur.raw && cur.raw.trim() !== (cur.tidiedRaw || '')) await tidyCurrent();
+// the dictation is the description: just tidy the capital letter and full stop
+function autoTidy() {
+  if (!cur || !cur.description) return;
+  let d = cur.description.replace(/\s+/g, ' ').trim();
+  if (d) { d = d[0].toUpperCase() + d.slice(1); if (!/[.!?]$/.test(d)) d += '.'; }
+  if (d !== cur.description) { cur.description = d; $('#f-raw').value = d; }
 }
-function setTidyNote() {
-  const n = $('#tidyNote'); if (!cur) return;
-  if (!cur.raw) n.textContent = '';
-  else if (cur.raw.trim() !== (cur.tidiedRaw || '')) n.textContent = 'Not tidied yet. Tap the button, or it happens when you tap Done.';
-  else n.textContent = cur.tidiedBy === 'claude' ? 'Tidied by Claude. Check the record below.' : 'Tidied on this phone. Check the record below.';
-}
+function setTidyNote() {}
 function fillEditor() {
   $$('#editor [data-k]').forEach(el => { el.value = cur[el.dataset.k] || ''; });
   $('#f-work').value = cur.work || ''; renderEdRoom();
-  $('#recordCard').hidden = !(cur.tidiedRaw || cur.location || cur.description || cur.action || cur.element || cur.trade);
-  setSeg('#edCat', cur.category); setSeg('#edStatus', cur.status);
+  setSeg('#edStatus', cur.status);
 }
-$('#tidyBtn').onclick = tidyCurrent;
 
 /* ---------------- settings ---------------- */
 let settings = { project: 'Energy from Waste plant, cladding package', preparedBy: '', apiKey: '' };
@@ -1250,7 +1217,7 @@ function refreshPlanViews() {
 /* --- room on the snag editor --- */
 function renderEdRoom() {
   const w = $('#edRoom');
-  if (!cur || !cur.planId && !cur.roomName) { w.hidden = true; return; }
+  if (true) { w.hidden = true; return; }  // the location field shows the room
   w.hidden = false;
   $('#edRoomName').textContent = roomLabel(cur) || 'Room removed';
 }
@@ -1339,13 +1306,9 @@ function renderRepItems() {
           <button type="button" data-act="down" aria-label="Move down" ${i < report.items.length - 1 ? '' : 'disabled'}>${ICON.down}</button>
           <button type="button" data-act="remove" aria-label="Remove from report">${ICON.x}</button>
         </span></header>
-      <div class="seg" role="group" aria-label="Type">${Object.entries(CAT).map(([k, v]) => `<button type="button" data-set="category" data-v="${k}" aria-pressed="${it.category === k}">${v}</button>`).join('')}</div>
       <div class="field"><label for="ri-loc-${i}">Location</label><textarea id="ri-loc-${i}" data-f="location" rows="2">${esc(it.location)}</textarea></div>
       <div class="field"><label for="ri-work-${i}">Category</label><select id="ri-work-${i}" data-f="work"><option value="">None</option>${WORK.map(w => `<option${it.work === w ? ' selected' : ''}>${w}</option>`).join('')}</select></div>
-      <div class="field"><label for="ri-el-${i}">Element</label><input type="text" id="ri-el-${i}" data-f="element" value="${esc(it.element)}"></div>
-      <div class="field"><label for="ri-desc-${i}">Issue</label><textarea id="ri-desc-${i}" data-f="description" rows="3">${esc(it.description)}</textarea></div>
-      <div class="field"><label for="ri-act-${i}">Action required</label><textarea id="ri-act-${i}" data-f="action" rows="3">${esc(it.action)}</textarea></div>
-      <div class="field"><label for="ri-trade-${i}">Responsible</label><input type="text" id="ri-trade-${i}" data-f="trade" value="${esc(it.trade)}"></div>
+      <div class="field"><label for="ri-desc-${i}">Description</label><textarea id="ri-desc-${i}" data-f="description" rows="3">${esc(it.description)}</textarea></div>
       <div class="seg two" role="group" aria-label="Status">${Object.entries(STATUS).map(([k, v]) => `<button type="button" data-set="status" data-v="${k}" aria-pressed="${it.status === k}">${v}</button>`).join('')}</div>
       ${itemPhotos(it).length ? `<div class="photos">${itemPhotos(it).map(p => `<div class="photo"><img src="${photoURL(p)}" alt=""><button class="x" type="button" data-pid="${p.id}" aria-label="Leave this photo out of the report">${ICON.x}</button></div>`).join('')}</div>` : ''}
     </article>`).join('') || `<div class="empty" style="padding:24px"><p>No items left in this report. Go back and select some snags.</p></div>`;
@@ -1399,13 +1362,13 @@ async function makeDocx() {
 
   // schedule
   const cols = [900, 2600, 1700, 3338, 1100];
-  const head = ['Ref', 'Location', 'Category', 'Action required', 'Status'];
+  const head = ['Ref', 'Location', 'Category', 'Description', 'Status'];
   children.push(new D.Paragraph({ heading: D.HeadingLevel.HEADING_1, children: [new D.TextRun('Schedule of items')], spacing: { before: 360, after: 120 } }));
   children.push(new D.Table({
     width: { size: W, type: D.WidthType.DXA }, columnWidths: cols, layout: D.TableLayoutType.FIXED,
     rows: [
       new D.TableRow({ tableHeader: true, children: head.map((h, i) => cell(P(h, { bold: true, size: 18, color: 'FFFFFF' }), cols[i], '16212C')) }),
-      ...report.items.map(it => new D.TableRow({ cantSplit: true, children: [refStr(it.ref), it.location, it.work, it.action, STATUS[it.status]].map((t, i) => cell(P(t || '–', { size: 18 }), cols[i])) }))
+      ...report.items.map(it => new D.TableRow({ cantSplit: true, children: [refStr(it.ref), it.location, it.work, it.description, STATUS[it.status]].map((t, i) => cell(P(t || '–', { size: 18 }), cols[i])) }))
     ]
   }));
 
@@ -1423,7 +1386,7 @@ async function makeDocx() {
   for (const it of report.items) {
     children.push(new D.Paragraph({ heading: D.HeadingLevel.HEADING_2, keepNext: true, spacing: { before: 320, after: 100 },
       children: [new D.TextRun(refStr(it.ref) + '   '), new D.TextRun({ text: it.location || 'Location not recorded' })] }));
-    children.push(kv([['Type', CAT[it.category]], ['Category', it.work], ...(it.room ? [['Room', it.room]] : []), ...(it.element ? [['Element', it.element]] : []), ['Status', STATUS[it.status]], ['Issue', it.description], ['Action required', it.action], ['Responsible', it.trade]]));
+    children.push(kv([['Category', it.work], ['Status', STATUS[it.status]], ['Description', it.description]]));
     const ph = itemPhotos(it);
     if (ph.length) {
       const imgs = [];
@@ -1491,12 +1454,11 @@ $('#printBtn').onclick = async () => {
     <table><tr><th>Site / project</th><td>${t(report.site)}</td></tr><tr><th>Client</th><td>${t(report.client)}</td></tr>
     <tr><th>Prepared by</th><td>${t(report.preparedBy)}</td></tr><tr><th>Inspection date</th><td>${dateTxt}</td></tr></table>
     ${report.notes ? `<p>${t(report.notes)}</p>` : ''}
-    <h2>Schedule of items</h2><table><tr><th>Ref</th><th>Location</th><th>Category</th><th>Action required</th><th>Status</th></tr>
-    ${report.items.map(it => `<tr><td>${refStr(it.ref)}</td><td>${t(it.location)}</td><td>${t(it.work)}</td><td>${t(it.action)}</td><td>${STATUS[it.status]}</td></tr>`).join('')}</table>
+    <h2>Schedule of items</h2><table><tr><th>Ref</th><th>Location</th><th>Category</th><th>Description</th><th>Status</th></tr>
+    ${report.items.map(it => `<tr><td>${refStr(it.ref)}</td><td>${t(it.location)}</td><td>${t(it.work)}</td><td>${t(it.description)}</td><td>${STATUS[it.status]}</td></tr>`).join('')}</table>
     ${figs.map(f => `<div class="item"><h2>Layout: ${esc(f.name)}</h2><img src="${f.url}" alt="" style="width:100%;max-height:none;border:1px solid #ccc"></div>`).join('')}
     ${report.items.map(it => `<div class="item"><h2>${refStr(it.ref)} &nbsp; ${t(it.location)}</h2>
-      <table><tr><th style="width:25%">Type</th><td>${CAT[it.category]}</td></tr><tr><th>Category</th><td>${t(it.work)}</td></tr>${it.room ? `<tr><th>Room</th><td>${t(it.room)}</td></tr>` : ''}${it.element ? `<tr><th>Element</th><td>${t(it.element)}</td></tr>` : ''}<tr><th>Status</th><td>${STATUS[it.status]}</td></tr>
-      <tr><th>Issue</th><td>${t(it.description)}</td></tr><tr><th>Action required</th><td>${t(it.action)}</td></tr><tr><th>Responsible</th><td>${t(it.trade)}</td></tr></table>
+      <table><tr><th style="width:25%">Category</th><td>${t(it.work)}</td></tr><tr><th>Status</th><td>${STATUS[it.status]}</td></tr><tr><th>Description</th><td>${t(it.description)}</td></tr></table>
       <div class="pics">${itemPhotos(it).map(p => `<img src="${photoURL(p)}" alt="">`).join('')}</div></div>`).join('')}`;
   setTimeout(() => window.print(), 300);
 };
@@ -1533,9 +1495,9 @@ async function makePdf() {
   doc.autoTable({
     startY: y + 9, margin: { left: M, right: M }, theme: 'grid', styles: { fontSize: 8.5, cellPadding: 1.8, valign: 'top' },
     headStyles: { fillColor: ink, textColor: 255 },
-    columnStyles: { 0: { cellWidth: 14 }, 1: { cellWidth: 38 }, 2: { cellWidth: 26 }, 4: { cellWidth: 26 }, 5: { cellWidth: 15 } },
-    head: [['Ref', 'Location', 'Category', 'Action required', 'Responsible', 'Status']],
-    body: report.items.map(it => [refStr(it.ref), it.location || '–', it.work || '–', it.action || '–', it.trade || '–', STATUS[it.status]])
+    columnStyles: { 0: { cellWidth: 14 }, 1: { cellWidth: 44 }, 2: { cellWidth: 30 }, 4: { cellWidth: 15 } },
+    head: [['Ref', 'Location', 'Category', 'Description', 'Status']],
+    body: report.items.map(it => [refStr(it.ref), it.location || '–', it.work || '–', it.description || '–', STATUS[it.status]])
   });
   // layouts
   for (const f of await reportFigures()) {
@@ -1554,8 +1516,7 @@ async function makePdf() {
     doc.autoTable({
       startY: y + 9, margin: { left: M, right: M }, theme: 'grid', styles: { fontSize: 9, cellPadding: 1.8 },
       columnStyles: { 0: { cellWidth: 36, fontStyle: 'bold', fillColor: [238, 241, 244] } },
-      body: [['Type', CAT[it.category]], ['Category', it.work || '–'], ...(it.room ? [['Room', it.room]] : []), ...(it.element ? [['Element', it.element]] : []),
-             ['Status', STATUS[it.status]], ['Issue', it.description || '–'], ['Action required', it.action || '–'], ['Responsible', it.trade || '–']]
+      body: [['Category', it.work || '–'], ['Status', STATUS[it.status]], ['Description', it.description || '–']]
     });
     y = doc.lastAutoTable.finalY + 3;
     const ph = itemPhotos(it);
@@ -1579,11 +1540,11 @@ async function makePdf() {
   return doc.output('blob');
 }
 
-const XLSX_HEAD = ['Ref', 'Status', 'Type', 'Category', 'Layout', 'Room', 'Location', 'Element', 'Issue', 'Action required', 'Responsible', 'Project', 'Recorded', 'Photos', 'Original note'];
+const XLSX_HEAD = ['Ref', 'Status', 'Category', 'Layout', 'Room', 'Location', 'Description', 'Recorded', 'Photos'];
 function xlsxRow(it, rec) {
   const p = rec && planById(rec.planId);
-  return [refStr(it.ref), STATUS[it.status], CAT[it.category], it.work || '', p ? p.name : '', it.room ? it.room.split(' · ')[0] : '', it.location || '', it.element || '',
-    it.description || '', it.action || '', it.trade || '', rec ? rec.site || '' : '', rec ? new Date(rec.createdAt) : '', (it.photoIds || []).length, rec ? rec.raw || '' : ''];
+  return [refStr(it.ref), STATUS[it.status], it.work || '', p ? p.name : '', it.room ? it.room.split(' · ')[0] : '', it.location || '',
+    it.description || '', rec ? new Date(rec.createdAt) : '', (it.photoIds || []).length];
 }
 async function makeXlsx(items) {
   await needLib('xlsx');
@@ -1591,7 +1552,7 @@ async function makeXlsx(items) {
   const rows = [XLSX_HEAD, ...items.map(it => xlsxRow(it, byId(it.id)))];
   const ws = X.utils.aoa_to_sheet(rows, { cellDates: true, dateNF: 'dd/mm/yyyy hh:mm' });
   ws['!autofilter'] = { ref: X.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: rows.length - 1, c: XLSX_HEAD.length - 1 } }) };
-  ws['!cols'] = [8, 9, 13, 18, 30, 22, 34, 18, 50, 50, 22, 28, 16, 8, 60].map(w => ({ wch: w }));
+  ws['!cols'] = [8, 9, 20, 34, 24, 34, 70, 16, 8].map(w => ({ wch: w }));
   const wb = X.utils.book_new(); X.utils.book_append_sheet(wb, ws, 'Snags');
   const out = X.write(wb, { bookType: 'xlsx', type: 'array' });
   return new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
