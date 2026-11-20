@@ -146,7 +146,7 @@ h1, h2, h3 { font-family: var(--f-display); letter-spacing: .01em; line-height: 
 .top .mark.homeonly svg { width: 24px; height: 24px; }
 .planbar .textbtn.small { background: transparent; border: 1.5px solid var(--line); color: var(--ink); border-radius: 999px; padding: 6px 12px; font-weight: 600; font-size: 14px; min-height: 36px; }
 .planbar .textbtn.small.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-.planscroll { touch-action: pan-x pan-y; overflow: auto; -webkit-overflow-scrolling: touch; padding: 0 var(--gutter-r) 220px var(--gutter-l); }
+.planscroll { touch-action: none; overflow: auto; -webkit-overflow-scrolling: touch; padding: 0 var(--gutter-r) 220px var(--gutter-l); }
 .planbox { position: relative; max-width: none; min-width: 100%; }
 .planbox img { display: block; width: 100%; max-width: none; height: auto; background: #fff; border-radius: 6px; box-shadow: var(--shadow); user-select: none; -webkit-user-drag: none; }
 .planbox svg { position: absolute; inset: 0; width: 100%; height: 100%; }
@@ -1280,20 +1280,63 @@ function zoomAt(nz, cx = innerWidth / 2, cy = innerHeight / 2) {
   $('.planscroll').scrollLeft += b1.left + fx * b1.width - cx;
   $('#planView').scrollTop += b1.top + fy * b1.height - cy;
 }
-// pinch to zoom on the layout (the page itself does not zoom)
+// touch on the layout: one finger drags it around, two fingers pinch to zoom and move it, double-tap zooms in
 {
-  const sc = $('.planscroll'); let pinch = null;
+  const sc = $('.planscroll'), pv = $('#planView');
   const dist = (a, b) => Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
-  sc.addEventListener('touchstart', e => { if (e.touches.length === 2) { e.preventDefault(); const [a, b] = e.touches; pinch = { d: dist(a, b), z: zoom }; } }, { passive: false });
-  sc.addEventListener('touchmove', e => {
-    if (!pinch || e.touches.length !== 2) return;
-    e.preventDefault(); const [a, b] = e.touches;
-    zoomAt(Math.max(1, Math.min(MAXZOOM, pinch.z * dist(a, b) / pinch.d)), (a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2);
+  const mid = (a, b) => [(a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2];
+  let g = null, moved = false, lastTap = 0, fling = 0;
+  const panBy = (dx, dy) => { sc.scrollLeft -= dx; pv.scrollTop -= dy; };
+  sc.addEventListener('touchstart', e => {
+    cancelAnimationFrame(fling);
+    if (e.touches.length === 2) {
+      e.preventDefault(); const [a, b] = e.touches;
+      g = { pinch: true, d: dist(a, b), z: zoom, m: mid(a, b) }; moved = true;
+    } else if (e.touches.length === 1) {
+      if (editing && e.target.closest('svg')) { g = null; return; }  // drawing a room
+      const t = e.touches[0]; g = { x: t.clientX, y: t.clientY, x0: t.clientX, y0: t.clientY, t: Date.now(), vx: 0, vy: 0 }; moved = false;
+    }
   }, { passive: false });
-  sc.addEventListener('touchend', e => { if (e.touches.length < 2) pinch = null; });
-  // double-tap zooms in, around the tap
-  let lastTap = 0;
-  sc.addEventListener('touchend', e => { if (e.touches.length || e.changedTouches.length !== 1 || editing) return; const t = e.changedTouches[0], now = Date.now(); if (now - lastTap < 300) { e.preventDefault(); zoomAt(Math.min(MAXZOOM, zoom * 2), t.clientX, t.clientY); lastTap = 0; } else lastTap = now; });
+  sc.addEventListener('touchmove', e => {
+    if (!g) return;
+    e.preventDefault();
+    if (g.pinch && e.touches.length === 2) {
+      const [a, b] = e.touches, m = mid(a, b);
+      panBy(m[0] - g.m[0], m[1] - g.m[1]); g.m = m;
+      zoomAt(Math.max(1, Math.min(MAXZOOM, g.z * dist(a, b) / g.d)), m[0], m[1]);
+    } else if (!g.pinch && e.touches.length === 1) {
+      const t = e.touches[0], now = Date.now(), dx = t.clientX - g.x, dy = t.clientY - g.y;
+      if (!moved && Math.hypot(t.clientX - g.x0, t.clientY - g.y0) < 8) return;  // still a tap
+      moved = true; panBy(dx, dy);
+      const dt = Math.max(1, now - g.t); g.vx = dx / dt; g.vy = dy / dt;
+      g.x = t.clientX; g.y = t.clientY; g.t = now;
+    }
+  }, { passive: false });
+  sc.addEventListener('touchend', e => {
+    if (!g) return;
+    if (g.pinch) { if (e.touches.length === 0) g = null; else if (e.touches.length === 1) { const t = e.touches[0]; g = { x: t.clientX, y: t.clientY, x0: t.clientX, y0: t.clientY, t: Date.now(), vx: 0, vy: 0 }; } return; }
+    if (e.touches.length) return;
+    const end = g; g = null;
+    if (moved) {
+      // let it glide a little after a quick flick
+      let vx = end.vx * 16, vy = end.vy * 16;
+      if (Date.now() - end.t > 80) return;
+      const step = () => { vx *= 0.92; vy *= 0.92; if (Math.hypot(vx, vy) < 0.5) return; panBy(vx, vy); fling = requestAnimationFrame(step); };
+      fling = requestAnimationFrame(step); return;
+    }
+    if (editing) return;
+    const t = e.changedTouches[0], now = Date.now();
+    if (now - lastTap < 300) { e.preventDefault(); zoomAt(Math.min(MAXZOOM, zoom * 2), t.clientX, t.clientY); lastTap = 0; } else lastTap = now;
+  });
+  sc.addEventListener('touchcancel', () => { g = null; });
+  // a drag never counts as tapping a room
+  sc.addEventListener('click', e => { if (moved) { e.stopPropagation(); e.preventDefault(); moved = false; } }, true);
+  // mouse: drag to move, wheel to zoom
+  let md = null;
+  sc.addEventListener('mousedown', e => { if (e.button || (editing && e.target.closest('svg'))) return; md = { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY }; moved = false; });
+  addEventListener('mousemove', e => { if (!md) return; if (!moved && Math.hypot(e.clientX - md.x0, e.clientY - md.y0) < 6) return; moved = true; panBy(e.clientX - md.x, e.clientY - md.y); md.x = e.clientX; md.y = e.clientY; });
+  addEventListener('mouseup', () => { md = null; });
+  sc.addEventListener('wheel', e => { if (!e.ctrlKey && !e.metaKey) return; e.preventDefault(); zoomAt(Math.max(1, Math.min(MAXZOOM, zoom * (e.deltaY < 0 ? 1.15 : 1 / 1.15))), e.clientX, e.clientY); }, { passive: false });
 }
 $('#zoomOut').onclick = () => zoomAt(Math.max(1, zoom / 1.5));
 $('#editRoomsBtn').onclick = () => { editing = !editing; hideRoomPanel(); renderPlan(); };

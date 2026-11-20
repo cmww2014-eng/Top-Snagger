@@ -1,4 +1,4 @@
-const CACHE = 'top-snagger-v15';
+const CACHE = 'top-snagger-v16';
 const SHELL = ['./', './index.html', './docx.umd.js', './pdf.min.js', './pdf.worker.min.js', './jspdf.umd.min.js', './jspdf.plugin.autotable.min.js', './xlsx.full.min.js', './manifest.webmanifest', './icon-hand.svg', './icon-hand-192.png', './icon-hand-512.png', './icon-hand-maskable-512.png', './apple-touch-icon.png'];
 // install fresh copies (bypassing the browser cache), take over straight away
 self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL.map(u => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting())));
