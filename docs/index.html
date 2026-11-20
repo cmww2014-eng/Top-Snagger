@@ -1908,7 +1908,15 @@ async function start() {
   else if (!plans.length) openUnlock();
   if (!inViewer()) {
     try { if (navigator.canShare && navigator.canShare({ files: [new File(['x'], 'x.docx', { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' })] })) $('#shareBtn').hidden = false; } catch {}
-    if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+    if ('serviceWorker' in navigator && location.protocol === 'https:') {
+      // when a new version takes over, reload once so the new screens show straight away
+      const had = !!navigator.serviceWorker.controller; let reloaded = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => { if (had && !reloaded && $('#editor').hidden) { reloaded = true; location.reload(); } });
+      navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(reg => {
+        reg.update().catch(() => {});
+        document.addEventListener('visibilitychange', () => { if (!document.hidden) reg.update().catch(() => {}); });
+      }).catch(() => {});
+    }
   }
   const shown = $$('#repRow .btn').filter(b => !b.hidden).length;
   $('#repRow').style.gridTemplateColumns = `repeat(${shown === 4 ? 2 : Math.min(shown, 3)}, 1fr)`;
