@@ -286,7 +286,6 @@ h1, h2, h3 { font-family: var(--f-display); letter-spacing: .01em; line-height: 
       <button type="button" id="backupBtn">Back up all snags (.json)</button>
       <label for="restoreInput">Load a backup or layouts file…</label>
       <button type="button" id="settingsBtn">Settings</button>
-      <button type="button" id="examplesBtn">Load example snags</button>
     </div>
     <input type="file" id="restoreInput" accept=".json,application/json" class="visually-hidden">
   </header>
@@ -568,9 +567,7 @@ function renderList() {
   if (!records.length) {
     list.innerHTML = `<div class="empty">${ICON.cam.replace('<svg', '<svg width="56" height="56"')}
       <h2>No snags yet</h2>
-      <p>Tap <b>New snag</b>, take a photo, then speak or type the location, the issue and what needs doing.</p>
-      <button class="btn ghost" type="button" id="emptyExamples">Load example snags to try it</button></div>`;
-    $('#emptyExamples').onclick = loadExamples;
+      <p>Tap a room on the layout to record a snag there.</p></div>`;
     return;
   }
   const items = records.filter(matches);
@@ -622,7 +619,6 @@ $('#newBtn').onclick = () => homeMode ? (backToLayout(), toast('Tap the room whe
 /* menu */
 $('#menuBtn').onclick = e => { e.stopPropagation(); $('#menu').hidden = !$('#menu').hidden; };
 document.addEventListener('click', e => { if (!e.target.closest('#menu')) $('#menu').hidden = true; });
-$('#examplesBtn').onclick = () => { $('#menu').hidden = true; loadExamples(); };
 $('#backupBtn').onclick = () => { $('#menu').hidden = true; backup(); };
 $('#restoreInput').onchange = e => { $('#menu').hidden = true; const f = e.target.files[0]; e.target.value = ''; if (f) restore(f); };
 
@@ -1901,6 +1897,9 @@ async function start() {
   try { navigator.storage?.persist?.(); } catch {}
   settings = { ...settings, ...(await db.get('settings', {})) };
   records = await db.all();
+  // the demo snags are gone from the app: clear any left on this phone
+  for (const r of records.filter(r => r.example)) await db.del(r.id);
+  records = records.filter(r => !r.example);
   plans = await planDb.all();
   renderList();
   if (['#snag', '#report', '#setup', '#plans', '#plan', '#list'].includes(location.hash)) history.replaceState(null, '', location.pathname + location.search);
