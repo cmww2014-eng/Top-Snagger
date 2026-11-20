@@ -138,6 +138,13 @@ h1, h2, h3 { font-family: var(--f-display); letter-spacing: .01em; line-height: 
 .zoom { display: flex; align-items: center; gap: 4px; }
 .zoom button { width: 44px; height: 44px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--surface); font-size: 22px; font-weight: 600; }
 .zoom span { min-width: 4ch; text-align: center; font-size: 13px; color: var(--muted); }
+#planView.home { z-index: 30; }
+#planView:not(.home) .homeonly, #planView.home .nothome { display: none !important; }
+.floorsel { flex: 1; min-width: 0; font: 600 16px var(--f-body); color: var(--ink); background: var(--surface); border: 0; border-radius: 10px; padding: 9px 10px; min-height: 42px; }
+.top .mark.homeonly { width: 30px; height: 30px; border-radius: 7px; background: var(--accent); display: grid; place-items: center; flex: none; }
+.top .mark.homeonly svg { width: 24px; height: 24px; }
+.planbar .textbtn.small { background: transparent; border: 1.5px solid var(--line); color: var(--ink); border-radius: 999px; padding: 6px 12px; font-weight: 600; font-size: 14px; min-height: 36px; }
+.planbar .textbtn.small.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 .planscroll { overflow: auto; -webkit-overflow-scrolling: touch; padding: 0 var(--gutter-r) 220px var(--gutter-l); }
 .planbox { position: relative; max-width: none; min-width: 100%; }
 .planbox img { display: block; width: 100%; max-width: none; height: auto; background: #fff; border-radius: 6px; box-shadow: var(--shadow); user-select: none; -webkit-user-drag: none; }
@@ -172,7 +179,8 @@ h1, h2, h3 { font-family: var(--f-display); letter-spacing: .01em; line-height: 
 .form input[type="text"], .form input[type="password"], .form input[type="date"], .form textarea {
   width: 100%; border: 1.5px solid var(--line); background: var(--surface); border-radius: 12px; padding: 12px 14px; font-size: 17px; line-height: 1.4; }
 .form textarea { min-height: 84px; resize: vertical; }
-.speakrow { display: grid; grid-template-columns: 1fr; gap: 8px; }
+.speakrow { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.speakrow #undoBtn { grid-column: 1 / -1; min-height: 48px; }
 .btn.speak { background: var(--accent); color: var(--accent-ink); font-size: 18px; min-height: 56px; }
 .btn.speak.live { background: var(--rec); color: #fff; animation: pulse 1.2s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .btn.speak.live { animation: none; } }
@@ -335,7 +343,10 @@ h1, h2, h3 { font-family: var(--f-display); letter-spacing: .01em; line-height: 
         <div class="inputwrap dict"><textarea id="f-raw" data-k="description" rows="5"></textarea></div>
         <div class="speakrow">
           <button class="btn speak" id="speakBtn" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>Speak</button>
+          <button class="btn dark" id="tidyBtn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg>Tidy up</button>
+          <button class="btn ghost" id="undoBtn" type="button" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>Undo tidy</button>
         </div>
+        <span class="tidynote" id="tidyNote"></span>
         <div class="hint" id="voiceHint" hidden></div>
       </div>
 
@@ -407,12 +418,25 @@ h1, h2, h3 { font-family: var(--f-display); letter-spacing: .01em; line-height: 
   <section class="sheet" id="planView" hidden aria-label="Layout">
     <header class="top">
       <div class="wrap">
-        <button class="iconbtn" id="planBack" type="button" aria-label="Back to layouts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
-        <h1><span id="planTitle">Layout</span></h1>
-        <button class="textbtn" id="editRoomsBtn" type="button">Edit rooms</button>
+        <span class="mark homeonly" aria-hidden="true"><svg viewBox="60 84 400 340" style="color:var(--accent-ink)"><g fill="currentColor"><rect x="196" y="96" width="64" height="176" rx="32" transform="rotate(-12 228 272)"/><rect x="232" y="216" width="214" height="64" rx="32"/><rect x="150" y="216" width="190" height="196" rx="56"/><rect x="72" y="248" width="86" height="140" rx="14"/></g><g fill="none" stroke="var(--accent)" stroke-width="16" stroke-linecap="round"><path d="M268 286h66M268 330h66M268 374h56"/><path d="M158 252v128"/></g></svg></span>
+        <select class="floorsel homeonly" id="floorSel" aria-label="Floor"></select>
+        <button class="textbtn homeonly" id="homeSnagsBtn" type="button">Snags</button>
+        <button class="iconbtn homeonly" id="homeMenuBtn" type="button" aria-label="More options" aria-haspopup="true"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
+        <button class="iconbtn nothome" id="planBack" type="button" aria-label="Back to layouts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <h1 class="nothome"><span id="planTitle">Layout</span></h1>
+      </div>
+      <div class="menu" id="homeMenu" hidden>
+        <button type="button" id="hmSnags">Logged snags</button>
+        <button type="button" id="hmReport">Create a report</button>
+        <button type="button" id="hmXlsx">Download snag log (Excel)</button>
+        <button type="button" id="hmLayouts">Add or manage layouts</button>
+        <button type="button" id="hmBackup">Back up all snags (.json)</button>
+        <label for="restoreInput">Load a backup or layouts file…</label>
+        <button type="button" id="hmSettings">Settings</button>
       </div>
     </header>
     <div class="wrap planbar"><span class="hinttext" id="planHint"></span>
+      <button class="textbtn small" id="editRoomsBtn" type="button">Edit rooms</button>
       <span class="zoom"><button type="button" id="zoomOut" aria-label="Zoom out">−</button><span id="zoomLbl" class="num">100%</span><button type="button" id="zoomIn" aria-label="Zoom in">+</button></span></div>
     <div class="planscroll"><div class="planbox" id="planBox"><img id="planImg" alt="Building layout"><svg id="planSvg" xmlns="http://www.w3.org/2000/svg"></svg></div></div>
     <div class="roompanel" id="roomPanel" hidden></div>
@@ -429,7 +453,7 @@ h1, h2, h3 { font-family: var(--f-display); letter-spacing: .01em; line-height: 
     <div class="wrap form">
       <div class="field"><label for="s-project">Project</label><input type="text" id="s-project" data-s="project" placeholder="e.g. Energy from Waste facility, cladding package"><p class="settings-note">Used on new snags and in reports.</p></div>
       <div class="field"><label for="s-by">Your name</label><input type="text" id="s-by" data-s="preparedBy" placeholder="Shown as Prepared by on reports"></div>
-      <div class="field" id="keyField" hidden><label for="s-key">Claude API key (optional)</label><input type="password" id="s-key" data-s="apiKey" autocomplete="off" placeholder="sk-ant-..."><p class="settings-note">With a key, Claude tidies your dictation when you have signal. Without one, or with no signal, the app tidies it on the phone using built-in rules. The key stays on this phone.</p></div>
+      <div class="field" id="keyField"><label for="s-key">Claude API key (optional)</label><input type="password" id="s-key" data-s="apiKey" autocomplete="off" placeholder="sk-ant-..."><p class="settings-note">With a key, Tidy up uses Claude to reorder and reword the description when you have signal. Without one, or with no signal, Tidy up uses simpler built-in rules on the phone. The key stays on this phone.</p></div>
     </div>
   </section>
 
@@ -571,7 +595,7 @@ $('#selAllBtn').onclick = () => {
   if (vis.every(r => selected.has(r.id))) vis.forEach(r => selected.delete(r.id)); else vis.forEach(r => selected.add(r.id));
   updateSelBar(); renderList();
 };
-$('#newBtn').onclick = () => plans.length ? startPick() : openEditor(null);
+$('#newBtn').onclick = () => homeMode ? (backToLayout(), toast('Tap the room where the snag is.')) : plans.length ? startPick() : openEditor(null);
 
 /* menu */
 $('#menuBtn').onclick = e => { e.stopPropagation(); $('#menu').hidden = !$('#menu').hidden; };
@@ -592,7 +616,7 @@ async function openEditor(r, ctx) {
   if (!cur.description && cur.raw) cur.description = cur.raw;
   $('#edTitle').textContent = r ? refStr(r.ref) : 'New snag';
   $('#edSaved').textContent = r ? 'Saved' : '';
-  fillEditor(); setTidyNote();
+  fillEditor(); showUndo(false);
   renderEdPhotos(); renderDelete(false);
   $('#editor').hidden = false; $('#editor').scrollTop = 0; document.body.style.overflow = 'hidden';
   if (location.hash !== '#snag') history.pushState(null, '', '#snag');
@@ -619,7 +643,7 @@ async function deleteCurrent() {
   toast(refStr(cur.ref) + ' deleted'); cur = null; closeEditor(true);
 }
 $('#edStatus').onclick = e => { const b = e.target.closest('button'); if (!b) return; cur.status = b.dataset.v; setSeg('#edStatus', cur.status); queueSave(); };
-$$('#editor [data-k]').forEach(el => el.addEventListener('input', () => { cur[el.dataset.k] = el.value; queueSave(); if (el.dataset.k === 'raw') setTidyNote(); }));
+$$('#editor [data-k]').forEach(el => el.addEventListener('input', () => { cur[el.dataset.k] = el.value; queueSave(); if (el.dataset.k === 'description' && undoText != null) showUndo(false); }));
 function queueSave() { $('#edSaved').textContent = 'Saving…'; clearTimeout(saveT); saveT = setTimeout(saveCurrent, 400); }
 async function saveCurrent() {
   clearTimeout(saveT); saveT = null;
@@ -751,7 +775,7 @@ function startVoice(el) {
 function endLive() {
   if (!live) return;
   const { el } = live; live = null; setSpeak(false);
-  el.value = el.value.trim(); if (cur && el.dataset.k) { cur[el.dataset.k] = el.value; queueSave(); setTidyNote(); }
+  el.value = el.value.trim(); if (cur && el.dataset.k) { cur[el.dataset.k] = el.value; queueSave(); if (undoText != null) showUndo(false); }
 }
 function stopVoice() { if (live) { voice && voice.stop(); endLive(); } }
 $('#speakBtn').onclick = () => {
@@ -912,6 +936,73 @@ const TIDY_SCHEMA = {
   additionalProperties: false
 };
 let sampleCap;
+const DESC_SYSTEM = `You tidy a site snag description that was dictated on a phone. The project is an Energy from Waste plant; snags cover cladding and internal finishes such as walls, taping and jointing, decoration, window sills, skirting, DPM and screed, facings and flooring.
+
+Rewrite the note so it reads clearly:
+- Keep every fact the speaker gave and add nothing: no new causes, sizes, locations, actions or people.
+- Put it in a sensible order: what is wrong and exactly where on the element first, then any extra detail, then what needs doing if the speaker said it.
+- Fix speech-to-text mistakes and mis-heard trade terms, remove filler words, false starts and repetition.
+- UK English, plain and concise, one to three short sentences, as written on a snag list. Do not repeat the room or location name, which is recorded separately.`;
+const DESC_SCHEMA = { type: 'object', properties: { description: { type: 'string' } }, required: ['description'], additionalProperties: false };
+async function claudeDesc(text, where) {
+  const user = (where ? 'Location (recorded separately): ' + where + '\n\n' : '') + 'Dictated note:\n' + text;
+  if (inViewer()) {
+    sampleCap ??= window.claude.use('sample').catch(() => null);
+    const sample = await sampleCap; if (!sample) return null;
+    const r = await sample.json(DESC_SYSTEM + '\n\nReply with only a JSON object with one string key, description.\n\n' + user, { modelTier: 'quick' });
+    return r && typeof r.description === 'string' ? r.description.trim() : null;
+  }
+  if (!settings.apiKey || navigator.onLine === false) return null;
+  const ctl = new AbortController(); const timer = setTimeout(() => ctl.abort(), 30000);
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST', signal: ctl.signal,
+      headers: { 'content-type': 'application/json', 'x-api-key': settings.apiKey, 'anthropic-version': '2023-06-01', 'anthropic-beta': 'server-side-fallback-2026-07-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({
+        model: 'claude-opus-5-5', max_tokens: 2000, fallbacks: 'default',
+        output_config: { effort: 'low', format: { type: 'json_schema', schema: DESC_SCHEMA } },
+        system: DESC_SYSTEM, messages: [{ role: 'user', content: user }]
+      })
+    });
+    if (res.status === 401) throw new Error('Claude API key was not accepted. Check it in Settings.');
+    if (!res.ok) throw new Error('Claude could not tidy this one (error ' + res.status + ').');
+    const j = await res.json();
+    if (j.stop_reason !== 'end_turn') return null;
+    const t = (j.content || []).find(b => b.type === 'text');
+    return t ? String(JSON.parse(t.text).description || '').trim() || null : null;
+  } finally { clearTimeout(timer); }
+}
+// on-phone fallback: spoken punctuation, filler words, repeats, capitals and full stops
+function localDesc(text) {
+  let t = ' ' + text + ' ';
+  t = t.replace(/\b(full stop|period)\b/gi, '.').replace(/\bcomma\b/gi, ',').replace(/\bnew (line|paragraph)\b/gi, '.');
+  t = t.replace(/\b(um+|uh+|er+m?|you know|i mean|basically|sort of|kind of|like I said|okay so|right so)\b[,]?/gi, ' ');
+  t = t.replace(/^\s*(so|and|right|ok|okay|yeah)\b[,]?\s*/i, ' ');
+  t = t.replace(/\b(\w+)(\s+\1\b)+/gi, '$1');
+  t = t.replace(/\s+([,.])/g, '$1').replace(/([,.])(?=\S)/g, '$1 ').replace(/\.\s*\./g, '.').replace(/\s+/g, ' ').trim();
+  t = t.replace(/\b(dpm|ffl|ssl|m&e|mep|cdm|rfi)\b/gi, m => m.toUpperCase());
+  return t.split(/(?<=[.!?])\s+/).map(x => sentence(x)).filter(x => x && x !== '.').join(' ');
+}
+let undoText = null;
+function showUndo(on) { $('#undoBtn').hidden = !on; if (!on) { undoText = null; $('#tidyNote').textContent = ''; } }
+async function tidyDescription() {
+  if (!cur) return;
+  stopVoice();
+  const text = ($('#f-raw').value || '').trim();
+  if (!text) { toast('Say or type the snag first.'); return; }
+  const btn = $('#tidyBtn'); const old = btn.innerHTML; btn.disabled = true; btn.textContent = 'Tidying…';
+  let out = null, how = 'phone';
+  try { out = await claudeDesc(text, cur.location); if (out) how = 'claude'; } catch (e) { toast((e?.message || 'Claude could not tidy this one.') + ' Tidied on the phone instead.'); }
+  if (!out) out = localDesc(text) || text;
+  btn.disabled = false; btn.innerHTML = old;
+  if (!cur) return;
+  const before = text;
+  cur.description = out; $('#f-raw').value = out; queueSave();
+  undoText = before; showUndo(true); undoText = before;
+  $('#tidyNote').textContent = out === before ? 'Already tidy.' : how === 'claude' ? 'Tidied by Claude. Tap Undo tidy to get your words back.' : 'Tidied on this phone. Tap Undo tidy to get your words back.';
+}
+$('#tidyBtn').onclick = tidyDescription;
+$('#undoBtn').onclick = () => { if (!cur || undoText == null) return; cur.description = undoText; $('#f-raw').value = undoText; queueSave(); showUndo(false); toast('Back to your words.'); };
 async function smartTidy(raw) {
   const user = 'Project: ' + (settings.project || 'Energy from Waste plant, cladding package') + '\n\nSpoken note:\n' + raw;
   if (inViewer()) {
@@ -1006,7 +1097,8 @@ const guessWork = t => (WORK_RE.find(([, re]) => re.test(t)) || [''])[0];
 
 let plans = [];
 const planById = id => plans.find(p => p.id === id);
-const roomLabel = r => { const p = planById(r.planId); const room = p && p.rooms.find(x => x.id === r.roomId); return room ? room.name + (plans.length > 1 ? ' · ' + p.name : '') : (r.roomName || ''); };
+const shortPlan = n => n.includes(' – ') ? n.split(' ')[0] + ' ' + n.split(' – ').slice(1).join(' – ') : n;
+const roomLabel = r => { const p = planById(r.planId); const room = p && p.rooms.find(x => x.id === r.roomId); return room ? room.name + (plans.length > 1 ? ' · ' + shortPlan(p.name) : '') : (r.roomName || ''); };
 const planDb = {
   async all() { if (!idb) return []; try { return await req(os('plans').getAll()); } catch { return []; } },
   async put(p) { if (idb) try { await req(os('plans', 'readwrite').put(p)); } catch (e) { toast('Could not save the layout: ' + (e?.name || 'storage error')); } },
@@ -1074,8 +1166,12 @@ async function addPlanFiles(files) {
     } catch (e) { toast(`Could not open ${f.name}. ${/pdf/i.test(f.name) ? 'Try saving the drawing as an image instead.' : ''}`); }
   }
   renderPlans();
-  if (added === 1) openPlan(plans[plans.length - 1].id, true);
-  else if (added) toast(`Added ${added} layouts`);
+  if (!added) return;
+  const last = plans[plans.length - 1].id;
+  if (!homeMode) await enterHome(); else fillFloors();
+  if (added === 1) { setFloor(last); editing = true; renderPlan(); toast('Drag a box over each room to mark it.'); }
+  else toast(`Added ${added} layouts. Pick a floor from the list at the top.`);
+  closePlans(); if (location.hash === '#list') history.back();
 }
 
 /* --- plans list --- */
@@ -1091,7 +1187,7 @@ function renderPlans() {
       <span class="body"><span class="loc">${esc(p.name)}</span>
       <span class="meta">${p.rooms.length} room${p.rooms.length === 1 ? '' : 's'} · ${openCount(p.id)} open snag${openCount(p.id) === 1 ? '' : 's'}</span></span></button>`).join('');
 }
-$('#planList').addEventListener('click', e => { const c = e.target.closest('[data-pid]'); if (c) openPlan(c.dataset.pid); });
+$('#planList').addEventListener('click', e => { const c = e.target.closest('[data-pid]'); if (!c) return; if (homeMode && !picking) { setFloor(c.dataset.pid); closePlans(); } else openPlan(c.dataset.pid); });
 $('#planInput').addEventListener('change', e => { const f = [...e.target.files]; e.target.value = ''; addPlanFiles(f); });
 let picking = false, pendingOpen = null;
 function startPick() {
@@ -1113,7 +1209,7 @@ function openPlans() {
   if (location.hash !== '#plans') history.pushState(null, '', '#plans');
 }
 function closePlans() { picking = false; $('#plans').hidden = true; document.body.style.overflow = ''; if (location.hash === '#plans') history.back(); }
-$('#plansBtn').onclick = openPlans;
+$('#plansBtn').onclick = () => homeMode ? backToLayout() : openPlans();
 $('#plansBack').onclick = closePlans;
 
 /* --- plan viewer and room editor --- */
@@ -1143,7 +1239,7 @@ function renderPlan() {
   $('#editRoomsBtn').hidden = picking && !editing && plan.rooms.length > 0;
   $('#planHint').textContent = picking && !editing ? (plan.rooms.length ? 'Tap the room where the snag is.' : 'No rooms marked on this layout yet. Tap Edit rooms to mark them.') : editing
     ? 'Drag a box over each room to mark it. Tap a marked room to rename or remove it.'
-    : plan.rooms.length ? 'Tap a room to see its snags or record a new one.' : 'No rooms marked yet. Tap Edit rooms to mark them.';
+    : plan.rooms.length ? (homeMode ? 'Tap a room to record a snag there.' : 'Tap a room to see its snags or record a new one.') : 'No rooms marked yet. Tap Edit rooms to mark them.';
   svg.innerHTML = plan.rooms.map(r => {
     const n = openCount(plan.id, r.id);
     return `<g class="room${n ? ' has' : ''}${panelRoom === r.id ? ' sel' : ''}" data-rid="${r.id}">
@@ -1178,6 +1274,7 @@ svg.addEventListener('click', e => {
   const room = plan.rooms.find(r => r.id === g.dataset.rid); if (!room) return;
   panelRoom = room.id; renderPlan();
   if (picking && !editing) { finishPick({ planId: plan.id, roomId: room.id }); return; }
+  if (homeMode && !editing) { panelRoom = null; renderPlan(); openEditor(null, { planId: plan.id, roomId: room.id }); return; }
   editing ? showRoomEditor(room, false) : showRoomSnags(room);
 });
 function hideRoomPanel() { $('#roomPanel').hidden = true; panelRoom = null; if (plan) renderPlan(); }
@@ -1209,7 +1306,53 @@ function showRoomSnags(room) {
   $('#rpNew').onclick = () => openEditor(null, { planId: plan.id, roomId: room.id });
   $$('.rpitem', p).forEach(b => b.onclick = () => openEditor(byId(b.dataset.id)));
 }
+/* --- home: the layout is the main screen, with a floor dropdown --- */
+let homeMode = false;
+function defaultFloor() {
+  return (plans.find(p => /–[^–]*ground/i.test(p.name)) || plans.find(p => /ground/i.test(p.name)) || plans[0]).id;
+}
+function fillFloors() {
+  $('#floorSel').innerHTML = plans.map(p => `<option value="${p.id}"${plan && plan.id === p.id ? ' selected' : ''}>${esc(shortPlan(p.name))}</option>`).join('');
+}
+function setFloor(id) {
+  const p = planById(id); if (!p) return;
+  plan = p; editing = false; zoom = 1; panelRoom = null;
+  $('#planImg').src = planURL(plan);
+  $('#planSvg').setAttribute('viewBox', `0 0 ${plan.w} ${plan.h}`);
+  $('#planView').scrollTop = 0; fillFloors(); applyZoom(); renderPlan(); $('#roomPanel').hidden = true;
+  db.set('homePlan', id);
+}
+async function enterHome() {
+  if (!plans.length) { exitHome(); return; }
+  homeMode = true; $('#planView').classList.add('home');
+  const last = await db.get('homePlan', null);
+  if (!plan || !planById(plan.id)) setFloor(planById(last) ? last : defaultFloor()); else fillFloors();
+  $('#plansBtn').textContent = 'Layout';
+  if (location.hash !== '#list') { $('#planView').hidden = false; document.body.style.overflow = 'hidden'; }
+}
+function exitHome() {
+  homeMode = false; $('#planView').classList.remove('home'); $('#planView').hidden = true; plan = null;
+  $('#plansBtn').textContent = 'Layouts'; document.body.style.overflow = '';
+}
+function showList() {
+  $('#homeMenu').hidden = true; renderList();
+  $('#planView').hidden = true; document.body.style.overflow = '';
+  if (location.hash !== '#list') history.pushState(null, '', '#list');
+}
+function backToLayout() { if (location.hash === '#list') history.back(); else { $('#planView').hidden = false; document.body.style.overflow = 'hidden'; } }
+$('#floorSel').onchange = e => setFloor(e.target.value);
+$('#homeSnagsBtn').onclick = showList;
+$('#homeMenuBtn').onclick = e => { e.stopPropagation(); $('#homeMenu').hidden = !$('#homeMenu').hidden; };
+document.addEventListener('click', e => { if (!e.target.closest('#homeMenu')) $('#homeMenu').hidden = true; });
+$('#hmSnags').onclick = showList;
+$('#hmReport').onclick = () => { $('#homeMenu').hidden = true; if (!records.length) { toast('There are no snags yet.'); return; } selected.clear(); records.forEach(r => selected.add(r.id)); buildReport(); };
+$('#hmXlsx').onclick = () => { $('#homeMenu').hidden = true; $('#xlsxAllBtn').click(); };
+$('#hmLayouts').onclick = () => { $('#homeMenu').hidden = true; openPlans(); };
+$('#hmBackup').onclick = () => { $('#homeMenu').hidden = true; backup(); };
+$('#hmSettings').onclick = () => { $('#homeMenu').hidden = true; openSettings(); };
 function refreshPlanViews() {
+  if (homeMode) { if (!plans.length) exitHome(); else { fillFloors(); if (!plan || !planById(plan.id)) setFloor(defaultFloor()); else renderPlan(); } }
+  else if (plans.length) enterHome();
   if (!$('#planView').hidden && plan) { renderPlan(); const room = plan.rooms.find(r => r.id === panelRoom); if (room && !editing && !$('#roomPanel').hidden) showRoomSnags(room); }
   if (!$('#plans').hidden) renderPlans();
 }
@@ -1645,7 +1788,8 @@ window.addEventListener('popstate', () => {
   if (!$('#editor').hidden && location.hash !== '#snag') { stopVoice(); saveCurrent().then(() => { cur = null; $('#editor').hidden = true; document.body.style.overflow = ''; renderList(); }); }
   if (!$('#report').hidden && location.hash !== '#report') { $('#report').hidden = true; document.body.style.overflow = ''; }
   if (!$('#settings').hidden && location.hash !== '#setup') { $('#settings').hidden = true; document.body.style.overflow = ''; }
-  if (!$('#planView').hidden && !['#plan', '#snag'].includes(location.hash)) { $('#planView').hidden = true; plan = null; renderPlans(); }
+  if (!homeMode && !$('#planView').hidden && !['#plan', '#snag'].includes(location.hash)) { $('#planView').hidden = true; plan = null; renderPlans(); }
+  if (homeMode && location.hash !== '#list' && $('#planView').hidden) { $('#planView').hidden = false; document.body.style.overflow = 'hidden'; renderPlan(); }
   if (!$('#plans').hidden && !['#plans', '#plan', '#snag'].includes(location.hash)) { $('#plans').hidden = true; document.body.style.overflow = ''; if (!pendingOpen) picking = false; }
   if (pendingOpen && !['#plans', '#plan'].includes(location.hash)) { const c = pendingOpen.ctx; pendingOpen = null; picking = false; openEditor(null, c); }
 });
@@ -1660,7 +1804,8 @@ async function start() {
   records = await db.all();
   plans = await planDb.all();
   renderList();
-  if (['#snag', '#report', '#setup', '#plans', '#plan'].includes(location.hash)) history.replaceState(null, '', location.pathname + location.search);
+  if (['#snag', '#report', '#setup', '#plans', '#plan', '#list'].includes(location.hash)) history.replaceState(null, '', location.pathname + location.search);
+  if (plans.length) await enterHome();
   if (!inViewer()) {
     try { if (navigator.canShare && navigator.canShare({ files: [new File(['x'], 'x.docx', { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' })] })) $('#shareBtn').hidden = false; } catch {}
     if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
