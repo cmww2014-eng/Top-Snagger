@@ -156,6 +156,14 @@ h1, h2, h3 { font-family: var(--f-display); letter-spacing: .01em; line-height: 
 .room.sel .shape { stroke-width: 1.5px; fill: color-mix(in srgb, var(--focus) 22%, transparent); stroke: var(--focus); }
 .room text { fill: #16212c; font-family: var(--f-display); font-weight: 600; text-anchor: middle; dominant-baseline: central; pointer-events: none; paint-order: stroke; stroke: rgba(255,255,255,.9); stroke-width: 2px; vector-effect: non-scaling-stroke; }
 .room circle { fill: var(--open); }
+.rbtn rect { fill: #16212c; stroke: #fff; stroke-width: 1px; vector-effect: non-scaling-stroke; cursor: pointer; filter: drop-shadow(0 1px 2px rgba(0,0,0,.35)); }
+.rbtn text { fill: #fff; stroke: none; font-family: var(--f-body); font-weight: 600; }
+.rbtn.has rect { fill: var(--open); }
+.rbtn.has text .n, .rbtn text .n { font-weight: 800; }
+.rbtn.sel rect { fill: var(--focus); }
+.rbtn.dot circle { fill: #16212c; stroke: #fff; stroke-width: 1.5px; vector-effect: non-scaling-stroke; cursor: pointer; }
+.rbtn.dot.has circle { fill: var(--open); }
+.rbtn.dot circle.hit { fill: transparent; stroke: none; }
 .room text.n { fill: #fff; stroke: none; font-family: var(--f-body); }
 .draft { fill: color-mix(in srgb, var(--focus) 20%, transparent); stroke: var(--focus); stroke-width: 3px; vector-effect: non-scaling-stroke; stroke-dasharray: 6 4; }
 .roompanel { position: fixed; left: 0; right: 0; bottom: 0; z-index: 42; background: var(--surface); border-top: 1px solid var(--line); box-shadow: 0 -6px 24px rgba(0,0,0,.18); border-radius: 16px 16px 0 0; padding-bottom: env(safe-area-inset-bottom, 0px); max-height: 60%; overflow-y: auto; }
@@ -1296,9 +1304,31 @@ function renderPlan() {
   $('#editRoomsBtn').textContent = editing ? 'Finish' : 'Edit rooms';
   $('#editRoomsBtn').classList.toggle('on', editing);
   $('#editRoomsBtn').hidden = picking && !editing && plan.rooms.length > 0;
-  $('#planHint').textContent = picking && !editing ? (plan.rooms.length ? 'Tap the room where the snag is.' : 'No rooms marked on this layout yet. Tap Edit rooms to mark them.') : editing
+  $('#planHint').textContent = !editing && plan.rooms.length && homeMode ? 'Tap a room name to record a snag. Pinch to zoom; dots become names.' : picking && !editing ? (plan.rooms.length ? 'Tap the room where the snag is.' : 'No rooms marked on this layout yet. Tap Edit rooms to mark them.') : editing
     ? 'Drag a box over each room to mark it. Tap a marked room to rename or remove it.'
     : plan.rooms.length ? (homeMode ? 'Tap a room to record a snag there.' : 'Tap a room to see its snags or record a new one.') : 'No rooms marked yet. Tap Edit rooms to mark them.';
+  if (!editing) {
+    // a name button in each room, kept the same size on screen whatever the zoom
+    const u = plan.w / Math.max(1, svg.getBoundingClientRect().width || 1);
+    const f = 12 * u, ph = 24 * u, pad = 8 * u, dot = 7 * u;
+    // biggest rooms get their button first; where buttons would overlap, a dot stands in until you zoom in
+    const placed = [], out = [];
+    for (const r of [...plan.rooms].sort((a, b) => b.w * b.h - a.w * a.h)) {
+      const n = openCount(plan.id, r.id);
+      const label = r.name + (n ? `  ${n}` : '');
+      const w = label.length * f * 0.56 + pad * 2, cx = r.lx ?? r.x + r.w / 2, cy = r.ly ?? r.y + r.h / 2;
+      const box = [cx - w / 2 - 2 * u, cy - ph / 2 - 2 * u, cx + w / 2 + 2 * u, cy + ph / 2 + 2 * u];
+      const clash = placed.some(b => box[0] < b[2] && box[2] > b[0] && box[1] < b[3] && box[3] > b[1]);
+      const cls = `room rbtn${n ? ' has' : ''}${panelRoom === r.id ? ' sel' : ''}`;
+      if (clash) { out.push(`<g class="${cls} dot" data-rid="${r.id}"><circle cx="${cx}" cy="${cy}" r="${dot}"></circle><circle class="hit" cx="${cx}" cy="${cy}" r="${dot * 2.2}"></circle></g>`); continue; }
+      placed.push(box);
+      out.push(`<g class="${cls}" data-rid="${r.id}">
+        <rect x="${cx - w / 2}" y="${cy - ph / 2}" width="${w}" height="${ph}" rx="${ph / 2}"></rect>
+        <text x="${cx}" y="${cy}" font-size="${f}">${esc(r.name)}${n ? `<tspan class="n" dx="${f * 0.5}">${n}</tspan>` : ''}</text></g>`);
+    }
+    svg.innerHTML = out.reverse().join('');
+    return;
+  }
   svg.innerHTML = plan.rooms.map(r => {
     const n = openCount(plan.id, r.id);
     return `<g class="room${n ? ' has' : ''}${panelRoom === r.id ? ' sel' : ''}" data-rid="${r.id}">
