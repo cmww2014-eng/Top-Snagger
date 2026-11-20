@@ -1402,11 +1402,15 @@ async function unlockLayouts(code) {
   const incoming = JSON.parse(text).plans || [];
   // replace any earlier copy of these layouts, keeping snags linked to their rooms
   const byName = new Map(incoming.map(p => [p.name, p])), byIdIn = new Map(incoming.map(p => [p.id, p]));
-  for (const old of plans.filter(p => byIdIn.has(p.id) || byName.has(p.name))) {
+  // earlier project layouts (including the old one-per-drawing ones) are replaced
+  for (const old of plans.filter(p => p.project || byIdIn.has(p.id) || byName.has(p.name) || /^\d{4} /.test(p.name))) {
     const np = byIdIn.get(old.id) || byName.get(old.name);
     for (const r of records.filter(r => r.planId === old.id)) {
-      const room = old.rooms.find(x => x.id === r.roomId), nr = room && np.rooms.find(x => x.id === room.id || x.name === room.name);
-      r.planId = np.id; if (nr) r.roomId = nr.id; else { delete r.roomId; if (room) r.roomName = room.name; }
+      const room = old.rooms.find(x => x.id === r.roomId);
+      let tp = np, nr = room && np && np.rooms.find(x => x.id === room.id || x.name === room.name);
+      if (!nr && room) for (const q of incoming) { const m = q.rooms.find(x => x.name === room.name); if (m) { tp = q; nr = m; break; } }
+      if (nr) { r.planId = tp.id; r.roomId = nr.id; }
+      else { delete r.planId; delete r.roomId; if (room) r.roomName = room.name; }
       await db.put(r);
     }
     await planDb.del(old.id); planURLs.delete(old.id); plans = plans.filter(p => p !== old);
